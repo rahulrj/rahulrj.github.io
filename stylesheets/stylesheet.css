@@ -26,9 +26,9 @@ h4 {
 
 .site-header{
 
-margin: auto;
-width: 33%;
-margin-top: 37px;
+position: relative;
+left: 35%;
+margin-top: 65px;
 
 
 }
@@ -67,12 +67,14 @@ h4 {
 
 .categories{
 
-  margin-left: 160px;
+  position: relative;
+  left: 19%;
   margin-top: 100px;
 
 }
 .category-summary{
   margin-top: 5px;
+  margin-bottom: 50px;
 }
 
 
@@ -177,22 +179,28 @@ span.reldate {
 
 .footer{
 
-  margin-bottom: 30px;
-  position: fixed;
-  bottom: 0px;
-  left: 35%;
+    left: 35%;
+    overflow: hidden;
+    position: absolute;
+    margin-bottom: 60px;
+    margin-top: 20px;
 }
 
 .footer li{
 
     background-color: #333;
-    border-radius: 50%;
+    border-radius: 30%;
     width: 30px;
     height: 30px;
     float: left;
     list-style: none;
     margin-left: 30px;
 
+}
+
+.footer ul{
+
+  overflow: hidden;
 }
 .footer .fa{
 
