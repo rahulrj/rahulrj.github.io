@@ -1,0 +1,245 @@
+/*h1,
+h2 {
+    margin-top: 40px
+}*/
+h1{
+
+  margin: 0px;
+  padding: 0px;
+}
+body,
+h2 {
+    font-weight: 300
+
+}
+h2{
+
+  padding: 0px;
+  margin: 0px;
+  margin-top: 30px;
+  font-size: 26px;
+  margin-bottom: -10px;
+}
+/*h3,
+h4 {
+    padding-top: 10px;
+    margin-bottom: -6px;
+    color: #444
+}*/
+
+.site-header{
+
+position: relative;
+left: 35%;
+margin-top: 65px;
+
+
+}
+.site-header h1{
+
+  color: #333;
+  font-weight: 300;
+  font-size: 45px;
+
+}
+
+body,
+h4 {
+    font-size: 17px;
+    /*line-height: 24px*/
+}
+h1,
+h3,
+h4 {
+    font-family: RobotoDraft, "Helvetica Neue", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400
+}
+body,
+h1,
+h2,
+h3,
+h4 {
+    font-family: RobotoDraft, "Helvetica Neue", "Helvetica Neue", Arial, sans-serif
+}
+
+
+.c,
+.c1,
+.cm,
+.cs,
+.ge,
+h4 {
+    font-style: italic
+}
+/** {
+    margin: 0;
+    box-sizing: border-box
+}*/
+body {
+    background-color: #fff
+
+}
+
+p{
+
+  margin-top: 30px;
+  font-size: 18px;
+  line-height: 25px;
+}
+
+#content{
+  margin-top: 8%;
+  margin-left: 20%;
+  margin-right: 14%;
+}
+
+.page-description{
+
+  color: rgba(51,51,51,.7);
+  font-weight: 300;
+  margin-top: 3px;
+  font-size: 18px;
+
+}
+
+.post-details{
+
+  margin-top: 35px;
+}
+
+.post-details img{
+
+    width: 40px;
+    border: 1px solid #BDBDD5;
+    float: left;
+    margin-right: 20px;
+}
+
+.post-author,.post-date{
+
+    display: block;
+    font-size: 15px;
+    line-height: 24px;
+    color: #858585;
+}
+
+h1 {
+    font-size: 40px;
+    line-height: 45px;
+    font-weight: 300;
+    color: #333;
+    letter-spacing: 1px;
+}
+/*h1:first-of-type {
+    margin-top: 20px
+}*/
+
+h3 {
+    font-size: 18px;
+    /*line-height: 26px*/
+}
+
+h1 .permalink,
+h2 .permalink,
+h3 .permalink,
+h4 .permalink,
+h5 .permalink,
+h6 .permalink {
+    visibility: hidden;
+    font-family: "Helvetica Neue", "Helvetica Neue", Arial, sans-serif;
+    /*line-height: 22px*/
+}
+code,
+pre {
+    font-family: Inconsolata, Monaco, Menlo, Consolas, "Courier New", monospace;
+    font-weight: 400
+}
+h1:hover .permalink,
+h2:hover .permalink,
+h3:hover .permalink,
+h4:hover .permalink,
+h5:hover .permalink,
+h6:hover .permalink {
+    visibility: visible
+}
+img {
+    border: none
+}
+a {
+    text-decoration: none
+}
+a:link,
+a:visited {
+    color: #3367d6
+}
+a:hover {
+    color: #008dff
+}
+span.reldate {
+    color: #888
+}
+
+.footer a{
+
+  color: #000000;
+}
+
+.footer{
+
+    left: 35%;
+    overflow: hidden;
+    position: absolute;
+    margin-bottom: 60px;
+    margin-top: 20px;
+}
+
+.footer li{
+
+    background-color: #333;
+    border-radius: 30%;
+    width: 30px;
+    height: 30px;
+    float: left;
+    list-style: none;
+    margin-left: 30px;
+
+}
+
+.footer ul{
+
+  overflow: hidden;
+}
+.footer .fa{
+
+    font-size: 18px;
+    color: #fff;
+    padding: 6px 7px;
+    display: inline-block;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transform: translate(0,0);
+
+}
+
+.site-header .tagline {
+    color: rgba(51, 51, 51, .7);
+    font-weight: 300
+}
+.cp,
+.cs,
+.gs,
+.k,
+.kc,
+.kd,
+.kn,
+.kp,
+.kr,
+.kt,
+.nc,
+.ne,
+.nf,
+.o,
+.ow {
+    font-weight: 700
+}

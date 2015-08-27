@@ -6,13 +6,14 @@ long back before this blog was made.Found it very interesting and now digging in
 other thing has become a habit."
 category:
 tags: [Threads, AsyncTask, Android]
+subheading: Implementation of our mighty AsyncTask
 ---
 
 This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an ```AsyncTask```. Is is just a background thread for ```doInBackground()```? I have found out now, so i decided to publish it so that it can help others.
 
 ## My Implementation
-SO the best i could think of AsyncTask is that it does the following when i call ```doInBackground(params).```
-```
+SO the best i could think of AsyncTask is that it does the following when i call `doInBackground(params).`
+{% highlight java %}
 Thread thread = new Thread() {
     @Override
     public void run() {
@@ -20,20 +21,20 @@ Thread thread = new Thread() {
     }
 };
 thread.start();
-```
+{% endhighlight %}
+
 I had no idea how the different ```Threads``` are handled in this case or how do i return the result from ```get()``` method? So i dived-deep and here are the results.
 
 ## AsyncTask Components
 The important components that constitute an AsyncTask is
-### Callable
+## Callable
 This component is almost like ```Runnable``` in the sense that both are designed for classes whose instances are to be executed on other thread.  But the difference between them is that it can also return a result and it can throw checked exceptions while a ```Runnable``` can't do these. While implementing it yourself, you would have to override its ```call()``` method to execute the task and make it return a value.  
 
 In AsyncTask, we wrap our main task in a ```Callable``` and pass that to a ```FutureTask```(explained below). The ```Callable``` that is used here is ```WorkerRunnable<Params,Result>mWorker```. ```Result``` is passed as parameter to the ```Callable``` because it returns a value of type ```Result``` from its ```call()``` method. We will discuss later what happens in this callable.
-```
+{% highlight java %}
  class WorkerRunnable<Params, Result> implements Callable<Result> {
         Params[] mParams;
-    }
-```
+{% endhighlight %}
 
 ### FutureTask
 * It is a component that helps in writing asynchonous code.

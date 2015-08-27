@@ -1,26 +1,59 @@
-<p>This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an <code>AsyncTask</code>. Is is just a background thread for <code>doInBackground()</code>? I have found out now, so i decided to publish it so that it can help others.</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=RobotoDraft:300,400|Inconsolata:400,700"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/postcss.css"/>
+ </head>
+
+  <body>
+    <div class="header">
+    </div>
+
+    <div id="content">
+
+          <h1 class="page-title">Digging into Android Asynctask</h1>
+          <div class="page-description">Implementation of our mighty AsyncTask</div>
+          <div class="post-details">
+
+            <img src="/images/pic_square.png">
+            <div class="post-author">
+              By Rahul Raja
+            </div>
+            <div class="post-date">August 27, 2015</div>
+
+          </div>
+
+
+          <p>This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an <code>AsyncTask</code>. Is is just a background thread for <code>doInBackground()</code>? I have found out now, so i decided to publish it so that it can help others.</p>
 
 <h2 id="my-implementation">My Implementation</h2>
-<p>SO the best i could think of AsyncTask is that it does the following when i call <code>doInBackground(params).</code>
-```
-Thread thread = new Thread() {
-    @Override
-    public void run() {</p>
+<p>SO the best i could think of AsyncTask is that it does the following when i call <code>doInBackground(params).</code></p>
 
-<pre><code>} }; thread.start(); ``` I had no idea how the different ```Threads``` are handled in this case or how do i return the result from ```get()``` method? So i dived-deep and here are the results.
-</code></pre>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">Thread</span> <span class="n">thread</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+
+    <span class="o">}</span>
+<span class="o">};</span>
+<span class="n">thread</span><span class="o">.</span><span class="na">start</span><span class="o">();</span></code></pre></div>
+
+<p>I had no idea how the different <code>Threads</code> are handled in this case or how do i return the result from <code>get()</code> method? So i dived-deep and here are the results.</p>
 
 <h2 id="asynctask-components">AsyncTask Components</h2>
 <p>The important components that constitute an AsyncTask is
-### Callable
+## Callable
 This component is almost like <code>Runnable</code> in the sense that both are designed for classes whose instances are to be executed on other thread.  But the difference between them is that it can also return a result and it can throw checked exceptions while a <code>Runnable</code> can’t do these. While implementing it yourself, you would have to override its <code>call()</code> method to execute the task and make it return a value.  </p>
 
-<p>In AsyncTask, we wrap our main task in a <code>Callable</code> and pass that to a <code>FutureTask</code>(explained below). The <code>Callable</code> that is used here is <code>WorkerRunnable&lt;Params,Result&gt;mWorker</code>. <code>Result</code> is passed as parameter to the <code>Callable</code> because it returns a value of type <code>Result</code> from its <code>call()</code> method. We will discuss later what happens in this callable.
-<code>
- class WorkerRunnable&lt;Params, Result&gt; implements Callable&lt;Result&gt; {
-        Params[] mParams;
-    }
-</code></p>
+<p>In AsyncTask, we wrap our main task in a <code>Callable</code> and pass that to a <code>FutureTask</code>(explained below). The <code>Callable</code> that is used here is <code>WorkerRunnable&lt;Params,Result&gt;mWorker</code>. <code>Result</code> is passed as parameter to the <code>Callable</code> because it returns a value of type <code>Result</code> from its <code>call()</code> method. We will discuss later what happens in this callable.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">WorkerRunnable</span><span class="o">&lt;</span><span class="n">Params</span><span class="o">,</span> <span class="n">Result</span><span class="o">&gt;</span> <span class="kd">implements</span> <span class="n">Callable</span><span class="o">&lt;</span><span class="n">Result</span><span class="o">&gt;</span> <span class="o">{</span>
+        <span class="n">Params</span><span class="o">[]</span> <span class="n">mParams</span><span class="o">;</span></code></pre></div>
 
 <h3 id="futuretask">FutureTask</h3>
 <ul>
@@ -102,3 +135,39 @@ public static final Executor THREAD_POOL_EXECUTOR
 <p>For <code>AsyncTask</code> we have also a function <code>get()</code> which returns the result calculated from <code>doInBackground()</code>. This internally calls <code>mFuture.get()</code> which gives the result computed by the <code>FutureTask</code>. It is a blocking call and it will wait if it is called and the result has not been calculated.</p>
 
 <p>Finally, there is <code>cancel(boolean mayInterruptIfRunning)</code> function available in <code>AsyncTask</code>. Calling this will call <code>mFuture.cancel()</code> and a flag is set.Quoting from the docs itself, if the task has not been started yet and a call to <code>cancel()</code> is made,the task will never start. If the task is already running, then the parameter <code>mayInterruptIfRunning</code> determines whether the thread executing this task should be interrupted or not. If the task is cancelled, then <code>onPostExecute()</code> will never be called. Details of how a running thread can stops its execution can be seen <a href="https://10kloc.wordpress.com/2013/12/24/cancelling-tasks-in-executors/">here</a></p>
+
+
+
+    </div>
+
+    <div class="footer">
+          <ul class="profile-links">
+
+      <li title="GitHub">
+        <a target="_blank" href="https://github.com/rahulrj">
+          <i class="fa fa-github"></i>
+        </a>
+      </li>
+      <li title="LinkedIn">
+        <a target="_blank" href="https://in.linkedin.com/pub/rahul-raja/59/336/57b">
+          <i class="fa fa-linkedin"></i>
+        </a>
+      </li>
+      <li title="Stackoverflow">
+        <a target="_blank" href="http://stackoverflow.com/users/3292108/diffy">
+          <i class="fa fa-stack-overflow"></i>
+        </a>
+      </li>
+
+      <li title="Facebook">
+        <a target="_blank" href="https://www.facebook.com/rahul.raja.963">
+          <i class="fa fa-facebook"></i>
+        </a>
+      </li>
+      </ul>
+
+    </div>
+
+
+    </body>
+</html>
