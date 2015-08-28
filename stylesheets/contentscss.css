@@ -97,6 +97,17 @@ body {
   margin-left: 20%;
   margin-right: 14%;
 }
+@media screen and (max-width: 768px){
+#content{
+
+    margin-left: 10%;
+
+   }
+   h1{
+     font-size: 30px;
+   }
+
+}
 
 h1 .permalink,
 h2 .permalink,
