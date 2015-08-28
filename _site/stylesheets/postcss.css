@@ -135,8 +135,14 @@ h1 {
 }*/
 
 h3 {
-    font-size: 18px;
+    font-size: 22px;
+    margin-top: 45px;
     /*line-height: 26px*/
+}
+li{
+
+  margin-bottom: 3px;
+  font-size: 18px;
 }
 
 h1 .permalink,
@@ -151,7 +157,7 @@ h6 .permalink {
 }
 code,
 pre {
-    font-family: Inconsolata, Monaco, Menlo, Consolas, "Courier New", monospace;
+    /*font-family: Inconsolata, Monaco, Menlo, Consolas, "Courier New", monospace;*/
     font-weight: 400
 }
 h1:hover .permalink,

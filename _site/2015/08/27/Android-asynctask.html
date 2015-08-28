@@ -46,9 +46,11 @@
 <p>I had no idea how the different <code>Threads</code> are handled in this case or how do i return the result from <code>get()</code> method? So i dived-deep and here are the results.</p>
 
 <h2 id="asynctask-components">AsyncTask Components</h2>
-<p>The important components that constitute an AsyncTask is
-## Callable
-This component is almost like <code>Runnable</code> in the sense that both are designed for classes whose instances are to be executed on other thread.  But the difference between them is that it can also return a result and it can throw checked exceptions while a <code>Runnable</code> can’t do these. While implementing it yourself, you would have to override its <code>call()</code> method to execute the task and make it return a value.  </p>
+<p>The important components that constitute an AsyncTask which will help to understand its functioning better is</p>
+
+<h3 id="callable">Callable</h3>
+
+<p>This component is almost like <code>Runnable</code> in the sense that both are designed for classes whose instances are to be executed on other thread.  But the difference between them is that it can also return a result and it can throw checked exceptions while a <code>Runnable</code> can’t do these. While implementing it yourself, you would have to override its <code>call()</code> method to execute the task and make it return a value.  </p>
 
 <p>In AsyncTask, we wrap our main task in a <code>Callable</code> and pass that to a <code>FutureTask</code>(explained below). The <code>Callable</code> that is used here is <code>WorkerRunnable&lt;Params,Result&gt;mWorker</code>. <code>Result</code> is passed as parameter to the <code>Callable</code> because it returns a value of type <code>Result</code> from its <code>call()</code> method. We will discuss later what happens in this callable.</p>
 
@@ -58,19 +60,18 @@ This component is almost like <code>Runnable</code> in the sense that both are d
 <h3 id="futuretask">FutureTask</h3>
 <ul>
   <li>It is a component that helps in writing asynchonous code.</li>
-  <li>A given task can be wrapped in a FutureTask and the it can be run asynchronously on an <code>Executor</code>using a background thread or a pool of threads and a FutureTask promises to return some result in the future.</li>
+  <li>A given task can be wrapped in a FutureTask and the it can be run asynchronously on an <code>Executor</code> using a background thread or a pool of threads and a FutureTask promises to return some result in the future.</li>
   <li>It provides methods to start and cancel a computation, query to check if the computation is complete and also return the value of computation. Thats why we are able to get the result from <code>AsyncTask</code> using <code>get()</code> method and also cancel the task using <code>cancel()</code> method.</li>
 </ul>
 
-<p>In AsyncTask, a <code>FutureTask</code> is created, which upon running will execute the above <code>Callable.</code>This <code>FutureTask</code> is executed on a different thread.And we will specify what should be done when <code>FutureTask</code> finishes its operation in <code>done()</code> method.
-```
-  mFuture = new FutureTask<result>(mWorker) {
-            @Override
-            protected void done() {</result></p>
+<p>In AsyncTask, a <code>FutureTask</code> is created, which upon running will execute the above <code>Callable.</code>This <code>FutureTask</code> is executed on a different thread.And we will specify what should be done when <code>FutureTask</code> finishes its operation in <code>done()</code> method.</p>
 
-<pre><code>        }
-    }; ```
-</code></pre>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">mFuture</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FutureTask</span><span class="o">&lt;</span><span class="n">Result</span><span class="o">&gt;(</span><span class="n">mWorker</span><span class="o">)</span> <span class="o">{</span>
+            <span class="nd">@Override</span>
+            <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">done</span><span class="o">()</span> <span class="o">{</span>
+
+            <span class="o">}</span>
+  <span class="o">};</span></code></pre></div>
 
 <h3 id="executor">Executor</h3>
 <p>This component executes the submitted tasks.An <code>Executor</code> can be used for running the <code>Runnable</code> objects without having to explicitly write <code>new Thread(new(RunnableTask())).start()</code> for each task and also mostly reusing the already created threads. We can use the syntax <code>executor.execute(new RunnableTask1())</code> for running the tasks.</p>
@@ -79,58 +80,65 @@ This component is almost like <code>Runnable</code> in the sense that both are d
 
 <p>The <code>Executor</code> used here is <code>SerialExecutor</code>. Its nothing but an implementation of <code>Executor</code>, that executes tasks one at a time in serial order. It maintains an <code>ArrayDeque</code> in which tasks are enqueued and are extracted for execution.</p>
 
-<h2 id="thread-pools">Thread Pools</h2>
+<h3 id="thread-pools">Thread Pools</h3>
 
 <p>Thread Pools are used for executing the task with a <code>ThreadPoolExecutor</code>. I have given a description and implementation of Thread Pools <a href="https://github.com/rahulrj/Deep-Dive/wiki/Thread-Pools">here</a>.</p>
 
-<h2 id="threadpoolexecutor">ThreadPoolExecutor</h2>
+<h3 id="threadpoolexecutor">ThreadPoolExecutor</h3>
 <p>It is an ExecutorService that executes each submitted task using one of possibly several pooled threads. A description is given <a href="https://github.com/rahulrj/Deep-Dive/wiki/ThreadPoolExecutor">here</a>.Its instance <code>THREAD_POOL_EXECUTOR</code> is used in <code>AsyncTask</code>.We will see how this is used in AsyncTask.</p>
 
 <h2 id="asynctask-working">AsyncTask Working</h2>
-<p>Those were the key components that will help in getting how <code>AsyncTask</code> works. Now lets see what happens in each step
-### What happens when we initialize an AsyncTask?
-It initializes the following things<br />
-* WorkerRunnable( mWorker)- It is actually a <code>Callable</code> inside which <code>doInBackground()</code> is executed and returns the Result to <code>onPostExecute()</code>. The thread is given a <code>BACKGROUND_PRIORITY</code> here which is less than the priority of the UI thread. Threads with <code>BACKGROUND_PRIORITY</code> are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, <code>mWorker</code> is only initialized here and not yet executed.  </p>
+<p>Those were the key components that will help in getting how <code>AsyncTask</code> works. Now lets see what happens in each step  </p>
+
+<h3 id="what-happens-when-we-initialize-an-asynctask">What happens when we initialize an AsyncTask?</h3>
+
+<p>It initializes the following things  </p>
 
 <ul>
-  <li>FutureTask(mFuture)- <code>mFuture</code> is the <code>FutureTask</code> here which accepts the above <code>Callable</code>. It is also just initialized here with the <code>Callable</code> and not executed here.</li>
+  <li>
+    <p>WorkerRunnable( mWorker)- It is actually a <code>Callable</code> inside which <code>doInBackground()</code> is executed and returns the Result to <code>onPostExecute()</code>. The thread is given a <code>BACKGROUND_PRIORITY</code> here which is less than the priority of the UI thread. Threads with <code>BACKGROUND_PRIORITY</code> are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, <code>mWorker</code> is only initialized here and not yet executed.  </p>
+  </li>
+  <li>
+    <p>FutureTask(mFuture)- <code>mFuture</code> is the <code>FutureTask</code> here which accepts the above <code>Callable</code>. It is also just initialized here with the <code>Callable</code> and not executed here.</p>
+  </li>
 </ul>
 
 <h3 id="when-we-execute-an-asynctask">When we execute() an AsyncTask?</h3>
-<p>The <code>execute()</code> method is declared in <code>AsyncTask</code> as
-<code>
-public final AsyncTask&lt;Params, Progress, Result&gt; execute(Params... params) {
-        return executeOnExecutor(sDefaultExecutor, params);
-    }
-</code>
-It returns itself and calls the <code>Executor</code>. Here <code>sDefaultExecutor</code> is a <code>SerialExecutor</code>. Now in <code>executeOnExecutor()</code>,status of the task is checked and is set to <code>RUNNING</code> if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also <code>onPreExecute()</code> is called from here, which calls <code>onPreExecute()</code> of our instance of <code>AsyncTask.</code></p>
+<p>The <code>execute()</code> method is declared in <code>AsyncTask</code> as</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">final</span> <span class="n">AsyncTask</span><span class="o">&lt;</span><span class="n">Params</span><span class="o">,</span> <span class="n">Progress</span><span class="o">,</span> <span class="n">Result</span><span class="o">&gt;</span> <span class="nf">execute</span><span class="o">(</span><span class="n">Params</span><span class="o">...</span> <span class="n">params</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">executeOnExecutor</span><span class="o">(</span><span class="n">sDefaultExecutor</span><span class="o">,</span> <span class="n">params</span><span class="o">);</span>
+    <span class="o">}</span></code></pre></div>
+
+<p>It returns itself and calls the <code>Executor</code>. Here <code>sDefaultExecutor</code> is a <code>SerialExecutor</code>. Now in <code>executeOnExecutor()</code>,status of the task is checked and is set to <code>RUNNING</code> if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also <code>onPreExecute()</code> is called from here, which calls <code>onPreExecute()</code> of our instance of <code>AsyncTask.</code></p>
 
 <p>Now, the <code>params</code> that are passed with <code>AsyncTask</code> are set in the <code>Callable(mWorker)</code>. And then the most important part happens i.e the <code>Executor(sDefaultExecutor)</code> executes the <code>FutureTask(mFuture)</code>. Note that the <code>SerialExecutor</code> used here is static and hence the same one will be used across all <code>AsyncTask</code> instances.</p>
 
-<p><code>SerialExecutor</code> maintains an <code>ArrayDeque</code> of <code>Runnable(mTasks)</code> . So when we say <code>executor.execute()</code>,it inserts the <code>FutureTask(mFuture)</code>at the end of the queue(mTasks). That task is extracted from the queue and it is executed by <code>ThreadPoolExecutor(THREAD_POOL_EXECUTOR)</code>.</p>
+<p><code>SerialExecutor</code> maintains an <code>ArrayDeque</code> of <code>Runnable(mTasks)</code> . So when we say <code>executor.execute()</code>,it inserts the <code>FutureTask(mFuture)</code>at the end of the queue(mTasks). That task is extracted from the queue and it is executed by  <code>ThreadPoolExecutor(THREAD_POOL_EXECUTOR)</code>.</p>
 
-<p>The <code>ThreadPoolExecutor</code> is used to execute tasks in parallel using its pool of threads.Its <code>CORE_POOL_SIZE</code> is the number of available processor cores in the phone+1 and <code>MAX_POOL_SIZE</code> is twice the no. of available processor cores.Here is the structure of the TPE used in <code>AsyncTask</code>.
-<code>
-public static final Executor THREAD_POOL_EXECUTOR
-            = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
-                    TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
-</code>
-<code>sThreadFactory</code> is literally a Thread Factory which is used to generate <code>Thread</code> for the Thread Pools. <code>ThreadFactory</code> is actually an interface which you can implement to give a custom implementation of the available function <code>Thread newThread(Runnable r)</code>. Its used to remove the hardwiring of calls to <code>new Thread(Runnable)</code> and we can also keep track of a thread  statistics like its count using our own implementation. The following is the implementation of <code>ThreadFactory</code> in <code>AsyncTask.</code>
-```
- private static final ThreadFactory sThreadFactory = new ThreadFactory() {
-        private final AtomicInteger mCount = new AtomicInteger(1);</p>
+<p>The <code>ThreadPoolExecutor</code> is used to execute tasks in parallel using its pool of threads.Its <code>CORE_POOL_SIZE</code> is the number of available processor cores in the phone+1 and <code>MAX_POOL_SIZE</code> is twice the no. of available processor cores.Here is the structure of the TPE used in <code>AsyncTask</code>.</p>
 
-<pre><code>    public Thread newThread(Runnable r) {
-        return new Thread(r, "AsyncTask #" + mCount.getAndIncrement());
-    }
-}; ``` ```sPoolWorkQueue``` is a ```BlockingQueue```. A ```BlockingQueue``` supports operations that wait for the queue to become non-empty when retrieving an element, and wait for space to become available in the queue when storing an element.Storing and retrieving of elements is done according to the conditions mentioned in [TPE](https://github.com/rahulrj/Deep-Dive/wiki/ThreadPoolExecutor) page.
-</code></pre>
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Executor</span> <span class="n">THREAD_POOL_EXECUTOR</span>
+            <span class="o">=</span> <span class="k">new</span> <span class="nf">ThreadPoolExecutor</span><span class="o">(</span><span class="n">CORE_POOL_SIZE</span><span class="o">,</span> <span class="n">MAXIMUM_POOL_SIZE</span><span class="o">,</span> <span class="n">KEEP_ALIVE</span><span class="o">,</span>
+                    <span class="n">TimeUnit</span><span class="o">.</span><span class="na">SECONDS</span><span class="o">,</span> <span class="n">sPoolWorkQueue</span><span class="o">,</span> <span class="n">sThreadFactory</span><span class="o">);</span></code></pre></div>
+
+<p><code>sThreadFactory</code> is literally a Thread Factory which is used to generate <code>Thread</code> for the Thread Pools. <code>ThreadFactory</code> is actually an interface which you can implement to give a custom implementation of the available function <code>Thread newThread(Runnable r)</code>. Its used to remove the hardwiring of calls to <code>new Thread(Runnable)</code> and we can also keep track of a thread  statistics like its count using our own implementation. The following is the implementation of <code>ThreadFactory</code> in <code>AsyncTask.</code></p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">ThreadFactory</span> <span class="n">sThreadFactory</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">ThreadFactory</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicInteger</span> <span class="n">mCount</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">AtomicInteger</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+
+        <span class="kd">public</span> <span class="n">Thread</span> <span class="nf">newThread</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="k">new</span> <span class="nf">Thread</span><span class="o">(</span><span class="n">r</span><span class="o">,</span> <span class="s">&quot;AsyncTask #&quot;</span> <span class="o">+</span> <span class="n">mCount</span><span class="o">.</span><span class="na">getAndIncrement</span><span class="o">());</span>
+        <span class="o">}</span>
+    <span class="o">};</span></code></pre></div>
+
+<p><code>sPoolWorkQueue</code> is a <code>BlockingQueue</code>. A <code>BlockingQueue</code> supports operations that wait for the queue to become non-empty when retrieving an element, and wait for space to become available in the queue when storing an element.Storing and retrieving of elements is done according to the conditions mentioned in <a href="https://github.com/rahulrj/Deep-Dive/wiki/ThreadPoolExecutor">TPE</a> page.</p>
 
 <p>Now coming back to the process, the <code>THREAD_POOL_EXECUTOR</code> executes the <code>FutureTask(mFuture)</code>, which in turn executes the task of <code>Callable(mWorker)</code>. As mentioned earlier, <code>doInBackground()</code> is executed from this <code>Callable</code> and its result is wrapped into a class <code>AsyncResult</code> and is sent to the <code>Handler(sHandler)</code> with the key <code>MESSAGE_POST_RESULT.</code> The <code>Handler</code> decodes the result using the passed key and it sends the result to <code>onPostExecute()</code> from there.</p>
 
 <p>For passing the Progress values to the UI thread,again it is sent by <code>Handler(sHandler)</code> to the UI thread using the key <code>MESSAGE_POST_PROGRESS</code>. The Handler then calls <code>onProgressUpdate(Progress... values)</code> on the main thread itself.</p>
 
-<p><code>Handler</code> is used here because we are passing the data from worker thread to the UI thread. I have also written my understanding of Handlers( by taking from developer docs and various blogs) <a href="https://github.com/rahulrj/Deep-Dive/wiki/Handlers">here</a></p>
+<p><code>Handler</code> is used here because we are passing the data from worker thread to the UI thread.</p>
 
 <p>For <code>AsyncTask</code> we have also a function <code>get()</code> which returns the result calculated from <code>doInBackground()</code>. This internally calls <code>mFuture.get()</code> which gives the result computed by the <code>FutureTask</code>. It is a blocking call and it will wait if it is called and the result has not been calculated.</p>
 
