@@ -4,7 +4,7 @@ title: "Digging into Android Asynctask"
 description: "It was the first time i looked into the source code of an Android component deeply.I wrote it
 long back before this blog was made.Found it very interesting and now digging into the source code of every
 other thing has become a habit."
-category:
+category: android
 tags: [Threads, AsyncTask, Android]
 subheading: Implementation of our mighty AsyncTask
 ---
@@ -74,7 +74,7 @@ Those were the key components that will help in getting how ```AsyncTask``` work
 ### What happens when we initialize an AsyncTask?  
 
 It initializes the following things  
- 
+
 - WorkerRunnable( mWorker)- It is actually a ```Callable``` inside which ```doInBackground()``` is executed and returns the Result to ```onPostExecute()```. The thread is given a ```BACKGROUND_PRIORITY``` here which is less than the priority of the UI thread. Threads with ```BACKGROUND_PRIORITY``` are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, ```mWorker``` is only initialized here and not yet executed.  
 
 - FutureTask(mFuture)- ```mFuture``` is the ```FutureTask``` here which accepts the above ```Callable```. It is also just initialized here with the ```Callable``` and not executed here.
