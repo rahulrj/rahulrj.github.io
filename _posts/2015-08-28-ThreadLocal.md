@@ -1,0 +1,74 @@
+---
+layout: post
+title: "Whats in a Lopper and ThreadLocal"
+description: "Looper/Handler and all sound pretty cool."
+category: android
+tags: [Threads, ThreadLocal, Android]
+subheading: Important part of Message passing between threads
+permalink: contents/Android-looper
+---
+
+We often get a message when we try to display a ```Toast``` from a background thread ( for example ).
+
+{% highlight java %}
+java.lang.RuntimeException: Can't create handler inside thread that has not called Looper.prepare()
+     at android.os.Handler.<init>(Handler.java:121)
+     at android.widget.Toast.<init>(Toast.java:68)
+     at android.widget.Toast.makeText(Toast.java:231)
+{% endhighlight %}
+
+A thing to wonder is that why can't it just say that "You cannot display a Toast on a worker thread". What does the first line
+of the exception mean? ( Thank god there is StackOflw for just copying the answer without actually knowing how it solves the problem and in some cases what was the problem). The first line of exception isnt decipherable unless i know what a ```Looper``` and ```Handler``` is. And i also looked into how they have been implemented in Android.
+
+## What exactly is Looper  
+A ```Looper``` can be thought of as a Message Queue. ```MessageQueue``` is actually also a class that that has been created in
+Android which ```Looper``` uses internally. However it lets take it as a simple ```Queue``` which can contain ```Message``` objects. ```Message``` is the component in which you can wrap anything and send it to a ```Handler```.  ```Looper``` class
+provides methods to loop over that queue and process the messages in it.
+<br><br>
+As an example, suppose we have a worker thread and we want to send some data from it to the main thread. Then what should be done? We will simply send the data to the UI thread's ```MessageQueue``` and the its looper will process the ```MessageQueue``` and execute the tasks. These are the steps
+<br><br>
+1. The UI thread has a ```Looper``` by default. So we will create a ```Handler``` in the main thread. While instantiating
+   the handler, it will associate the handler with the looper(lets say it as a MessageQueue for now) of the main thread
+
+    {% highlight java %}
+      private Handler handler = new Handler();
+    {% endhighlight %}
+
+  And of course, there is only one ```Looper``` that can be created per thread. Since there is already a ```Looper```  associated with the UI thread, it will throw exception when you will try to call ```Looper.prepare()``` on it.
+  <br><br>
+2. Using the above created ```Handler``` and its post() method, post a Runnable( which contains a task to be executed in
+   the UI thread) to the ```MessageQueue```.
+   {% highlight java %}
+   handler.post(new Runnable() {
+          @Override
+          public void run() {}
+   });
+   {% endhighlight %}
+   Now the Looper of the UI thread will loop through this queue and process the tasks that are present.
+
+## Implementation of Looper
+
+Since a ```Looper``` is specific to a particular thread,so it internally uses a ```ThreadLocal``` object for storing
+the information about a thread. ```ThreadLocal``` as the name suggests, is an object which is local to every thread accessing this object. So suppose you create a ```ThreadLocal``` object and have 2 threads accessing it, then each thread can do ```get()``` and ```set()``` on this object separately and the value set by one thread will remain local to that thread only.
+```Looper.prepare()``` is implemented as
+{% highlight java %}
+private static void prepare(boolean quitAllowed) {
+        if (sThreadLocal.get() != null) {
+            throw new RuntimeException("Only one Looper may be created per thread");
+        }
+        sThreadLocal.set(new Looper(quitAllowed));
+    }
+{% endhighlight %}
+So the threadlocal's value is set as the instance of the ```Looper```. Also a new instance of ```MessageQueue``` ,which is the soul of a ```Looper``` is created in its constructor.(```quitAllowed``` is a boolean used internally in MessageQueue).
+There is also a function ```prepareMainLooper()``` which is used by Android internally to initialize the ```Looper``` for
+UI thread. So we dont need to call this function at all.
+<br><br>
+Now to start your ```Looper``` for it to process the queue,you will have to call ```Looper.loop()```.It gets its
+```MessageQueue``` and checks the value of ```MessageQueue.next()```in an infinite loop. Now ```next()``` is actually a
+blocking call.  When there are no messages left in the queue, the thread blocks until there are new messages. Then it takes
+the messages from the queue and return back to the ```Looper```. The ```Looper``` sends the ```Message``` object for
+processing to its corresponding ```Handler``` using
+{% highlight java %}
+message.target.handleMessage(message);
+{% endhighlight %}
+When ```next()``` returns ```NULL```, then then ```MessageQueue``` quits.

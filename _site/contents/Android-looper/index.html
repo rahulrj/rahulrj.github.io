@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=RobotoDraft:300,400|Inconsolata:400,700"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/postcss.css"/>
+ </head>
+
+  <body>
+    <div class="header">
+    </div>
+
+    <div id="content">
+
+          <h1 class="page-title">Whats in a Lopper and ThreadLocal</h1>
+          <div class="page-description">Important part of Message passing between threads</div>
+          <div class="post-details">
+
+            <img src="/images/pic_square.png">
+            <div class="post-author">
+              By Rahul Raja
+            </div>
+            <div class="post-date">August 28, 2015</div>
+
+          </div>
+
+
+          <p>We often get a message when we try to display a <code>Toast</code> from a background thread ( for example ).</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">java</span><span class="o">.</span><span class="na">lang</span><span class="o">.</span><span class="na">RuntimeException</span><span class="o">:</span> <span class="n">Can</span><span class="err">&#39;</span><span class="n">t</span> <span class="n">create</span> <span class="n">handler</span> <span class="n">inside</span> <span class="n">thread</span> <span class="n">that</span> <span class="n">has</span> <span class="n">not</span> <span class="n">called</span> <span class="n">Looper</span><span class="o">.</span><span class="na">prepare</span><span class="o">()</span>
+     <span class="n">at</span> <span class="n">android</span><span class="o">.</span><span class="na">os</span><span class="o">.</span><span class="na">Handler</span><span class="o">.&lt;</span><span class="n">init</span><span class="o">&gt;(</span><span class="n">Handler</span><span class="o">.</span><span class="na">java</span><span class="o">:</span><span class="mi">121</span><span class="o">)</span>
+     <span class="n">at</span> <span class="n">android</span><span class="o">.</span><span class="na">widget</span><span class="o">.</span><span class="na">Toast</span><span class="o">.&lt;</span><span class="n">init</span><span class="o">&gt;(</span><span class="n">Toast</span><span class="o">.</span><span class="na">java</span><span class="o">:</span><span class="mi">68</span><span class="o">)</span>
+     <span class="n">at</span> <span class="n">android</span><span class="o">.</span><span class="na">widget</span><span class="o">.</span><span class="na">Toast</span><span class="o">.</span><span class="na">makeText</span><span class="o">(</span><span class="n">Toast</span><span class="o">.</span><span class="na">java</span><span class="o">:</span><span class="mi">231</span><span class="o">)</span></code></pre></div>
+
+<p>A thing to wonder is that why can’t it just say that “You cannot display a Toast on a worker thread”. What does the first line
+of the exception mean? ( Thank god there is StackOflw for just copying the answer without actually knowing how it solves the problem and in some cases what was the problem). The first line of exception isnt decipherable unless i know what a <code>Looper</code> and <code>Handler</code> is. And i also looked into how they have been implemented in Android.</p>
+
+<h2 id="what-exactly-is-looper">What exactly is Looper</h2>
+<p>A <code>Looper</code> can be thought of as a Message Queue. <code>MessageQueue</code> is actually also a class that that has been created in
+Android which <code>Looper</code> uses internally. However it lets take it as a simple <code>Queue</code> which can contain <code>Message</code> objects. <code>Message</code> is the component in which you can wrap anything and send it to a <code>Handler</code>.  <code>Looper</code> class
+provides methods to loop over that queue and process the messages in it.
+<br /><br />
+As an example, suppose we have a worker thread and we want to send some data from it to the main thread. Then what should be done? We will simply send the data to the UI thread’s <code>MessageQueue</code> and the its looper will process the <code>MessageQueue</code> and execute the tasks. These are the steps
+<br /><br />
+1. The UI thread has a <code>Looper</code> by default. So we will create a <code>Handler</code> in the main thread. While instantiating
+   the handler, it will associate the handler with the looper(lets say it as a MessageQueue for now) of the main thread</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">Handler</span> <span class="n">handler</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Handler</span><span class="o">();</span></code></pre></div>
+
+<p>And of course, there is only one <code>Looper</code> that can be created per thread. Since there is already a <code>Looper</code>  associated with the UI thread, it will throw exception when you will try to call <code>Looper.prepare()</code> on it.
+  <br /><br />
+2. Using the above created <code>Handler</code> and its post() method, post a Runnable( which contains a task to be executed in
+   the UI thread) to the <code>MessageQueue</code>.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">handler</span><span class="o">.</span><span class="na">post</span><span class="o">(</span><span class="k">new</span> <span class="nf">Runnable</span><span class="o">()</span> <span class="o">{</span>
+          <span class="nd">@Override</span>
+          <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{}</span>
+   <span class="o">});</span></code></pre></div>
+
+<p>Now the Looper of the UI thread will loop through this queue and process the tasks that are present.</p>
+
+<h2 id="implementation-of-looper">Implementation of Looper</h2>
+
+<p>Since a <code>Looper</code> is specific to a particular thread,so it internally uses a <code>ThreadLocal</code> object for storing
+the information about a thread. <code>ThreadLocal</code> as the name suggests, is an object which is local to every thread accessing this object. So suppose you create a <code>ThreadLocal</code> object and have 2 threads accessing it, then each thread can do <code>get()</code> and <code>set()</code> on this object separately and the value set by one thread will remain local to that thread only.
+<code>Looper.prepare()</code> is implemented as</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">prepare</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">quitAllowed</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">sThreadLocal</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">RuntimeException</span><span class="o">(</span><span class="s">&quot;Only one Looper may be created per thread&quot;</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">sThreadLocal</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">new</span> <span class="nf">Looper</span><span class="o">(</span><span class="n">quitAllowed</span><span class="o">));</span>
+    <span class="o">}</span></code></pre></div>
+
+<p>So the threadlocal’s value is set as the instance of the <code>Looper</code>. Also a new instance of <code>MessageQueue</code> ,which is the soul of a <code>Looper</code> is created in its constructor.(<code>quitAllowed</code> is a boolean used internally in MessageQueue).
+There is also a function <code>prepareMainLooper()</code> which is used by Android internally to initialize the <code>Looper</code> for
+UI thread. So we dont need to call this function at all.
+<br /><br />
+Now to start your <code>Looper</code> for it to process the queue,you will have to call <code>Looper.loop()</code>.It gets its
+<code>MessageQueue</code> and checks the value of <code>MessageQueue.next()</code>in an infinite loop. Now <code>next()</code> is actually a
+blocking call.  When there are no messages left in the queue, the thread blocks until there are new messages. Then it takes
+the messages from the queue and return back to the <code>Looper</code>. The <code>Looper</code> sends the <code>Message</code> object for
+processing to its corresponding <code>Handler</code> using</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">message</span><span class="o">.</span><span class="na">target</span><span class="o">.</span><span class="na">handleMessage</span><span class="o">(</span><span class="n">message</span><span class="o">);</span></code></pre></div>
+
+<p>When <code>next()</code> returns <code>NULL</code>, then then <code>MessageQueue</code> quits.</p>
+
+
+
+    </div>
+
+    <div class="footer">
+          <ul class="profile-links">
+
+      <li title="GitHub">
+        <a target="_blank" href="https://github.com/rahulrj">
+          <i class="fa fa-github"></i>
+        </a>
+      </li>
+      <li title="LinkedIn">
+        <a target="_blank" href="https://in.linkedin.com/pub/rahul-raja/59/336/57b">
+          <i class="fa fa-linkedin"></i>
+        </a>
+      </li>
+      <li title="Stackoverflow">
+        <a target="_blank" href="http://stackoverflow.com/users/3292108/diffy">
+          <i class="fa fa-stack-overflow"></i>
+        </a>
+      </li>
+
+      <li title="Facebook">
+        <a target="_blank" href="https://www.facebook.com/rahul.raja.963">
+          <i class="fa fa-facebook"></i>
+        </a>
+      </li>
+      </ul>
+
+    </div>
+
+
+    </body>
+</html>

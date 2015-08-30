@@ -97,17 +97,7 @@ body {
   margin-left: 20%;
   margin-right: 14%;
 }
-@media screen and (max-width: 768px){
-#content{
 
-    margin-left: 10%;
-
-   }
-   h1{
-     font-size: 30px;
-   }
-
-}
 
 h1 .permalink,
 h2 .permalink,
@@ -162,8 +152,7 @@ span.reldate {
     overflow: hidden;
     position: absolute;
     margin-bottom: 60px;
-    margin-top: 20px;
-    bottom: 0%;
+    margin-top: 60px;
 }
 
 .footer li{
@@ -192,6 +181,26 @@ span.reldate {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transform: translate(0,0);
+
+}
+@media screen and (max-width: 768px){
+#content{
+
+    margin-left: 10%;
+
+   }
+   h1{
+     font-size: 30px;
+   }
+   .footer{
+     left: 18%;
+   }
+   h2{
+     font-size: 22px;
+   }
+   body{
+     font-size: 16px;
+   }
 
 }
 
