@@ -17,7 +17,7 @@
 
     <div id="content">
 
-          <h1 class="page-title">Whats in a Lopper and ThreadLocal</h1>
+          <h1 class="page-title">Whats in a Looper?</h1>
           <div class="page-description">Important part of Message passing between threads</div>
           <div class="post-details">
 
@@ -66,6 +66,8 @@ As an example, suppose we have a worker thread and we want to send some data fro
 
 <h2 id="implementation-of-looper">Implementation of Looper</h2>
 
+<h3 id="looper-functioning">Looper functioning</h3>
+
 <p>Since a <code>Looper</code> is specific to a particular thread,so it internally uses a <code>ThreadLocal</code> object for storing
 the information about a thread. <code>ThreadLocal</code> as the name suggests, is an object which is local to every thread accessing this object. So suppose you create a <code>ThreadLocal</code> object and have 2 threads accessing it, then each thread can do <code>get()</code> and <code>set()</code> on this object separately and the value set by one thread will remain local to that thread only.
 <code>Looper.prepare()</code> is implemented as</p>
@@ -89,7 +91,28 @@ processing to its corresponding <code>Handler</code> using</p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">message</span><span class="o">.</span><span class="na">target</span><span class="o">.</span><span class="na">handleMessage</span><span class="o">(</span><span class="n">message</span><span class="o">);</span></code></pre></div>
 
-<p>When <code>next()</code> returns <code>NULL</code>, then then <code>MessageQueue</code> quits.</p>
+<p>Every <code>Message</code> object holds a reference to its corresponding <code>Handler</code>. So <code>target</code> here refers to that <code>Handler</code>.In any case when <code>next()</code> returns <code>NULL</code>, then then <code>MessageQueue</code> quits. Afer a <code>Message</code>
+has been dispatched, all its variables are cleared( it is recycled ).</p>
+
+<h3 id="quitting-the-looper">Quitting the Looper</h3>
+
+<p>Since a <code>Looper</code> processes the messages in an infinite loop, it must be quit after the work associated with it
+is done. So we can use <code>quit()</code> to finish it abruptly and it will not process any message pending in the queue.
+Or using <code>quitSafely()</code> which will process all the pending messages in the queue and then terminate. But both
+of these methods will not allow any message  scheduled  in the future. Once <code>quit()</code> is called, <code>Looper.prepare()</code>
+cannot be called again.</p>
+
+<h3 id="sync-barrier">Sync Barrier</h3>
+
+<p>Another useful thing in <code>Looper</code> is <code>postSyncBarrier()</code>. So if you have started the loop,and sometimes
+you want that the messages in the queue should not be processed until a particular condition is satisfied,you can block
+the process using this function. But again you have to unblock this operation using <code>removeSyncBarrier(int token)</code>,
+with the token that you get in <code>postSyncBarrier()</code> otherwise the system will hang. As the name suggests,this blocking/unblocking works only in case of synchronous messages (where ack. is required). An example could be like
+in the UI thread, block all messages until the view is rendered.
+<br /><br />
+And to answer the question at the beginning, actually <code>Toast</code> uses a <code>Handler</code> internally in <code>TN</code> class.
+And you cant create a <code>Handler</code> in a thread that doesnt have a <code>Looper</code>. So it throws the exception.
+If <code>Looper.prepare()</code> is called before calling <code>Toast</code>, no exception is thrown.</p>
 
 
 

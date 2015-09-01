@@ -83,6 +83,9 @@ ul{
   margin-top: 10px;
   line-height: 22px;
 }
+.post-details{
+  margin-bottom: 50px;
+}
 /** {
     margin: 0;
     box-sizing: border-box

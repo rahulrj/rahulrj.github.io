@@ -7,7 +7,7 @@ other thing has become a habit."
 category: android
 tags: [Threads, AsyncTask, Android]
 subheading: Implementation of our mighty AsyncTask
-permalink: contents/Android-asynctask
+permalink: android/Android-asynctask
 ---
 
 This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an ```AsyncTask```. Is is just a background thread for ```doInBackground()```? I have found out now, so i decided to publish it so that it can help others.

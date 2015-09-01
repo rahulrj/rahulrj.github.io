@@ -137,6 +137,7 @@ h1 {
 h3 {
     font-size: 22px;
     margin-top: 45px;
+    margin-bottom: -15px;
     /*line-height: 26px*/
 }
 li{
