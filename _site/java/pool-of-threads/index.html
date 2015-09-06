@@ -64,7 +64,32 @@ implementations to execute a task.</p>
 
 <p>These extra functionalities provides methods like to shut down an <code>Executor</code>( so that it will reject the new incoming tasks),to return a <code>Future</code> so that we can keep progress on the submitted tasks etc.
 <br /><br />
-Now lets make a Thread Pool and see what can we do with them and also how those things are done internally.</p>
+Now lets make a Thread Pool and see what can we do with them and also how those things are done internally.
+While there are factory methods provided by ```Executors`` class to create thread pool, we will take the hard path of
+calling its constructor. The constructor initializes some pretty obvious things.So what do you think would be required in this process?</p>
+
+<p>-&gt; <strong>A container for holding the tasks</strong> -  Suppose you have a pool of 5 threads and all of them are busy and you give          them a 6th task to execute.So for holding those tasks, a queue is used.In this case a <code>LinkedBlockingQueue</code> is used.The head of the queue is that element that has been in the queue the longest time. The tail of the queue is that element that has been on the queue the shortest time.
+<br /><br />
+-&gt; <strong>Now where are the threads coming from</strong> - Here threads will come from a factory.Literally its called a <code>ThreadFactory</code>. Its an interface which is used to create new threads <strong>on-demand</strong></p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">ThreadFactory</span> <span class="o">{</span>
+
+    <span class="n">Thread</span> <span class="nf">newThread</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">);</span>
+<span class="o">}</span></code></pre></div>
+
+<p>So here the implementations can define things like priority,status etc for the newly created thread. Java uses <code>DefaultThreadFactory</code> here which creates non-daemon threads with normal priority.
+<br /><br />
+-&gt; <strong>What is the size of this pool</strong> - Its defined by two parameters that has to be supplied in the constructor.
+<code>corePoolSize</code> is  the no of threads that will be there in the pool even even they are lying idle(this is also configurable. No need to leave the thread idle). <code>maxPoolSizeMax</code> is the max  number of threads to allow in the pool.
+When a new task is submitted in method <code>execute(Runnable)</code>, and fewer than <code>corePoolSize</code> threads are running, a new thread is  created to handle the request, even if other worker threads are idle.  If there are more than <code>corePoolSize</code> but less than <code>maximumPoolSize</code> threads running, a new thread will be created only if the queue is full.</p>
+
+<p>The number of non-core idle threads in the pool can also be reduced through <code>keepAliveTimeUnit</code> (supplied in the constructor ) and core idle thread by <code>allowCoreThreadTimeout(boolean b)</code>.
+<br /><br />
+-&gt; <strong>Something for handling the rejected tasks</strong> - When tasks are supplied even after the <code>ThreadPoolExecutor</code> is shut down or when the queue is full, they are rejected. For handling the rejected tasks, we have <code>RejectedExecutionHandler</code>. Its not an Android <code>Handler</code> but just a literal handler for handling the tasks.Its just an interface with a method</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="n">ThreadPoolExecutor</span> <span class="n">executor</span><span class="o">);</span></code></pre></div>
+
+<p>The default <code>RejectedExecutionHandler</code> used here just throws an exception when any task is rejected. There are other REHs available for use like <code>DiscardPolicy</code> and <code>DiscardOldestPolicy</code>. Of course we can also create our own and supply it in <code>setRejectedExecutionHandler (RejectedExecutionHandler)</code>.</p>
 
 
 
