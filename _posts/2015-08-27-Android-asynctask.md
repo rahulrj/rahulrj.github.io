@@ -10,10 +10,10 @@ subheading: Implementation of our mighty AsyncTask
 permalink: android/Android-asynctask
 ---
 
-This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an ```AsyncTask```. Is is just a background thread for ```doInBackground()```? I have found out now, so i decided to publish it so that it can help others.
+This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an ```AsyncTask```. How are the tasks handled and result is passed to the UI thread?Is it just a background thread for ```doInBackground()```?
 
 ## My Implementation
-SO the best i could think of AsyncTask is that it does the following when i call `doInBackground(params).`
+I was not aware of ```Future``` or ```Callable``` or Thread Pools before this.So the best i could think of AsyncTask is that it does the following when i call `doInBackground(params).`
 {% highlight java %}
 Thread thread = new Thread() {
     @Override
@@ -24,7 +24,7 @@ Thread thread = new Thread() {
 thread.start();
 {% endhighlight %}
 
-I had no idea how the different ```Threads``` are handled in this case or how do i return the result from ```get()``` method? So i dived-deep and here are the results.
+I had no idea how the different ```Threads``` are handled in this case or how do i return the result from ```get()``` method.
 
 ## AsyncTask Components
 The important components that constitute an AsyncTask which will help to understand its functioning better is
@@ -42,7 +42,7 @@ In AsyncTask, we wrap our main task in a ```Callable``` and pass that to a ```Fu
 ### FutureTask
 * It is a component that helps in writing asynchonous code.
 * A given task can be wrapped in a FutureTask and the it can be run asynchronously on an ```Executor``` using a background thread or a pool of threads and a FutureTask promises to return some result in the future.
-* It provides methods to start and cancel a computation, query to check if the computation is complete and also return the value of computation. Thats why we are able to get the result from ```AsyncTask``` using ```get()``` method and also cancel the task using ```cancel()``` method.
+* It provides methods to start and cancel a computation, query to check if the computation is complete and also return the value of computation. Thats why we are able to get the result from ```AsyncTask``` using ```get()``` method and also cancel the task ( not really )using ```cancel()``` method.
 
 In AsyncTask, a ```FutureTask``` is created, which upon running will execute the above ```Callable.```This ```FutureTask``` is executed on a different thread.And we will specify what should be done when ```FutureTask``` finishes its operation in ```done()``` method.
 {% highlight java %}
@@ -59,11 +59,11 @@ This component executes the submitted tasks.An ```Executor``` can be used for ru
 
 Its an interface with only one method ```execute(Runnable)```. The task submitted can execute in the same thread, in a different thread or a pool of threads, depending on the implementation of the ```execute``` method.
 
-The ```Executor``` used here is ```SerialExecutor```. Its nothing but an implementation of ```Executor```, that executes tasks one at a time in serial order. It maintains an ```ArrayDeque``` in which tasks are enqueued and are extracted for execution.
+The ```Executor``` used in ```AsyncTask``` is ```SerialExecutor```. Its nothing but an implementation of ```Executor```, that executes tasks one at a time in serial order. It maintains an ```ArrayDeque``` in which tasks are enqueued and are extracted for execution.
 
 ### Thread Pools
 
-Thread Pools are used for executing the task with a ```ThreadPoolExecutor```. I have given a description and implementation of Thread Pools [here](https://github.com/rahulrj/Deep-Dive/wiki/Thread-Pools).
+Thread Pools are used for executing the task using  a ```ThreadPoolExecutor```,which is a kind of manager for thread pools. I have written a description and implementation of Thread Pools [here](https://github.com/rahulrj/Deep-Dive/wiki/Thread-Pools).
 
 ### ThreadPoolExecutor
 It is an ExecutorService that executes each submitted task using one of possibly several pooled threads. A description is given [here](https://github.com/rahulrj/Deep-Dive/wiki/ThreadPoolExecutor).Its instance ```THREAD_POOL_EXECUTOR``` is used in ```AsyncTask```.We will see how this is used in AsyncTask.
@@ -76,7 +76,7 @@ Those were the key components that will help in getting how ```AsyncTask``` work
 
 It initializes the following things  
 
-- WorkerRunnable( mWorker)- It is actually a ```Callable``` inside which ```doInBackground()``` is executed and returns the Result to ```onPostExecute()```. The thread is given a ```BACKGROUND_PRIORITY``` here which is less than the priority of the UI thread. Threads with ```BACKGROUND_PRIORITY``` are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, ```mWorker``` is only initialized here and not yet executed.  
+- WorkerRunnable( mWorker)- It is actually a ```Callable``` inside which the function ```doInBackground()``` is executed and returns the Result to ```onPostExecute()```. Now the thread that will be executing this is also given a ```BACKGROUND_PRIORITY``` here which is less than the priority of the UI thread. Threads with ```BACKGROUND_PRIORITY``` are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, ```mWorker``` is only initialized here and not yet executed.  
 
 - FutureTask(mFuture)- ```mFuture``` is the ```FutureTask``` here which accepts the above ```Callable```. It is also just initialized here with the ```Callable``` and not executed here.
 
@@ -87,9 +87,9 @@ public final AsyncTask<Params, Progress, Result> execute(Params... params) {
         return executeOnExecutor(sDefaultExecutor, params);
     }
 {% endhighlight %}
-It returns itself and calls the ```Executor```. Here ```sDefaultExecutor``` is a ```SerialExecutor```. Now in ```executeOnExecutor()```,status of the task is checked and is set to ```RUNNING``` if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also ```onPreExecute()``` is called from here, which calls ```onPreExecute()``` of our instance of ```AsyncTask.```
+It returns itself and calls the ```Executor```. Here ```sDefaultExecutor``` is a ```SerialExecutor```. Now in ```executeOnExecutor()```,status of the task is checked and is set to ```RUNNING``` if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also it is this place that ```onPreExecute()``` is called from, which calls ```onPreExecute()``` of our instance of ```AsyncTask.```
 
-Now, the ```params``` that are passed with ```AsyncTask``` are set in the ```Callable(mWorker)```. And then the most important part happens i.e the ```Executor(sDefaultExecutor)``` executes the ```FutureTask(mFuture)```. Note that the ```SerialExecutor``` used here is static and hence the same one will be used across all ```AsyncTask``` instances.
+Now, the ```params``` that are passed with ```AsyncTask``` are set in the ```Callable(mWorker)```. And then the most important part of ```Asynctask``` happens here i.e the ```Executor(sDefaultExecutor)``` executes the ```FutureTask(mFuture)```. Note that the ```SerialExecutor``` used here is static and hence the same one will be used across all ```AsyncTask``` instances.
 
 ```SerialExecutor``` maintains an ```ArrayDeque``` of ```Runnable(mTasks)``` . So when we say ```executor.execute()```,it inserts the ```FutureTask(mFuture)```at the end of the queue(mTasks). That task is extracted from the queue and it is executed by  ```ThreadPoolExecutor(THREAD_POOL_EXECUTOR)```.
 
@@ -119,4 +119,4 @@ For passing the Progress values to the UI thread,again it is sent by ```Handler(
 
 For ```AsyncTask``` we have also a function ```get()``` which returns the result calculated from ```doInBackground()```. This internally calls ```mFuture.get()``` which gives the result computed by the ```FutureTask```. It is a blocking call and it will wait if it is called and the result has not been calculated.
 
-Finally, there is ```cancel(boolean mayInterruptIfRunning)``` function available in ```AsyncTask```. Calling this will call ```mFuture.cancel()``` and a flag is set.Quoting from the docs itself, if the task has not been started yet and a call to ```cancel()``` is made,the task will never start. If the task is already running, then the parameter ```mayInterruptIfRunning``` determines whether the thread executing this task should be interrupted or not. If the task is cancelled, then ```onPostExecute()``` will never be called. Details of how a running thread can stops its execution can be seen [here](https://10kloc.wordpress.com/2013/12/24/cancelling-tasks-in-executors/)
+Finally, there is ```cancel(boolean mayInterruptIfRunning)``` function available in ```AsyncTask```. Calling this will call ```mFuture.cancel()``` and a flag is set.Quoting from the docs itself, if the task has not been started yet and a call to ```cancel()``` is made,the task will never start. If the task is already running, then the parameter ```mayInterruptIfRunning``` determines whether the thread executing this task should be interrupted or not. If the task is cancelled, then ```onPostExecute()``` will never be called.

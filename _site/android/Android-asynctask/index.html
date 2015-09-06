@@ -30,10 +30,10 @@
           </div>
 
 
-          <p>This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an <code>AsyncTask</code>. Is is just a background thread for <code>doInBackground()</code>? I have found out now, so i decided to publish it so that it can help others.</p>
+          <p>This post deals with the internal implementation of AsyncTask.. I was just curious to find out what happens when we run an <code>AsyncTask</code>. How are the tasks handled and result is passed to the UI thread?Is it just a background thread for <code>doInBackground()</code>?</p>
 
 <h2 id="my-implementation">My Implementation</h2>
-<p>SO the best i could think of AsyncTask is that it does the following when i call <code>doInBackground(params).</code></p>
+<p>I was not aware of <code>Future</code> or <code>Callable</code> or Thread Pools before this.So the best i could think of AsyncTask is that it does the following when i call <code>doInBackground(params).</code></p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">Thread</span> <span class="n">thread</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Thread</span><span class="o">()</span> <span class="o">{</span>
     <span class="nd">@Override</span>
@@ -43,7 +43,7 @@
 <span class="o">};</span>
 <span class="n">thread</span><span class="o">.</span><span class="na">start</span><span class="o">();</span></code></pre></div>
 
-<p>I had no idea how the different <code>Threads</code> are handled in this case or how do i return the result from <code>get()</code> method? So i dived-deep and here are the results.</p>
+<p>I had no idea how the different <code>Threads</code> are handled in this case or how do i return the result from <code>get()</code> method.</p>
 
 <h2 id="asynctask-components">AsyncTask Components</h2>
 <p>The important components that constitute an AsyncTask which will help to understand its functioning better is</p>
@@ -61,7 +61,7 @@
 <ul>
   <li>It is a component that helps in writing asynchonous code.</li>
   <li>A given task can be wrapped in a FutureTask and the it can be run asynchronously on an <code>Executor</code> using a background thread or a pool of threads and a FutureTask promises to return some result in the future.</li>
-  <li>It provides methods to start and cancel a computation, query to check if the computation is complete and also return the value of computation. Thats why we are able to get the result from <code>AsyncTask</code> using <code>get()</code> method and also cancel the task using <code>cancel()</code> method.</li>
+  <li>It provides methods to start and cancel a computation, query to check if the computation is complete and also return the value of computation. Thats why we are able to get the result from <code>AsyncTask</code> using <code>get()</code> method and also cancel the task ( not really )using <code>cancel()</code> method.</li>
 </ul>
 
 <p>In AsyncTask, a <code>FutureTask</code> is created, which upon running will execute the above <code>Callable.</code>This <code>FutureTask</code> is executed on a different thread.And we will specify what should be done when <code>FutureTask</code> finishes its operation in <code>done()</code> method.</p>
@@ -78,11 +78,11 @@
 
 <p>Its an interface with only one method <code>execute(Runnable)</code>. The task submitted can execute in the same thread, in a different thread or a pool of threads, depending on the implementation of the <code>execute</code> method.</p>
 
-<p>The <code>Executor</code> used here is <code>SerialExecutor</code>. Its nothing but an implementation of <code>Executor</code>, that executes tasks one at a time in serial order. It maintains an <code>ArrayDeque</code> in which tasks are enqueued and are extracted for execution.</p>
+<p>The <code>Executor</code> used in <code>AsyncTask</code> is <code>SerialExecutor</code>. Its nothing but an implementation of <code>Executor</code>, that executes tasks one at a time in serial order. It maintains an <code>ArrayDeque</code> in which tasks are enqueued and are extracted for execution.</p>
 
 <h3 id="thread-pools">Thread Pools</h3>
 
-<p>Thread Pools are used for executing the task with a <code>ThreadPoolExecutor</code>. I have given a description and implementation of Thread Pools <a href="https://github.com/rahulrj/Deep-Dive/wiki/Thread-Pools">here</a>.</p>
+<p>Thread Pools are used for executing the task using  a <code>ThreadPoolExecutor</code>,which is a kind of manager for thread pools. I have written a description and implementation of Thread Pools <a href="https://github.com/rahulrj/Deep-Dive/wiki/Thread-Pools">here</a>.</p>
 
 <h3 id="threadpoolexecutor">ThreadPoolExecutor</h3>
 <p>It is an ExecutorService that executes each submitted task using one of possibly several pooled threads. A description is given <a href="https://github.com/rahulrj/Deep-Dive/wiki/ThreadPoolExecutor">here</a>.Its instance <code>THREAD_POOL_EXECUTOR</code> is used in <code>AsyncTask</code>.We will see how this is used in AsyncTask.</p>
@@ -96,7 +96,7 @@
 
 <ul>
   <li>
-    <p>WorkerRunnable( mWorker)- It is actually a <code>Callable</code> inside which <code>doInBackground()</code> is executed and returns the Result to <code>onPostExecute()</code>. The thread is given a <code>BACKGROUND_PRIORITY</code> here which is less than the priority of the UI thread. Threads with <code>BACKGROUND_PRIORITY</code> are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, <code>mWorker</code> is only initialized here and not yet executed.  </p>
+    <p>WorkerRunnable( mWorker)- It is actually a <code>Callable</code> inside which the function <code>doInBackground()</code> is executed and returns the Result to <code>onPostExecute()</code>. Now the thread that will be executing this is also given a <code>BACKGROUND_PRIORITY</code> here which is less than the priority of the UI thread. Threads with <code>BACKGROUND_PRIORITY</code> are assigned only a small fraction of the CPU if other foreground threads are busy, so that it wont hurt the foreground performance. BTW, <code>mWorker</code> is only initialized here and not yet executed.  </p>
   </li>
   <li>
     <p>FutureTask(mFuture)- <code>mFuture</code> is the <code>FutureTask</code> here which accepts the above <code>Callable</code>. It is also just initialized here with the <code>Callable</code> and not executed here.</p>
@@ -110,9 +110,9 @@
         <span class="k">return</span> <span class="nf">executeOnExecutor</span><span class="o">(</span><span class="n">sDefaultExecutor</span><span class="o">,</span> <span class="n">params</span><span class="o">);</span>
     <span class="o">}</span></code></pre></div>
 
-<p>It returns itself and calls the <code>Executor</code>. Here <code>sDefaultExecutor</code> is a <code>SerialExecutor</code>. Now in <code>executeOnExecutor()</code>,status of the task is checked and is set to <code>RUNNING</code> if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also <code>onPreExecute()</code> is called from here, which calls <code>onPreExecute()</code> of our instance of <code>AsyncTask.</code></p>
+<p>It returns itself and calls the <code>Executor</code>. Here <code>sDefaultExecutor</code> is a <code>SerialExecutor</code>. Now in <code>executeOnExecutor()</code>,status of the task is checked and is set to <code>RUNNING</code> if the task is not already running and it throws exception if you try to run the same task again before it has finished. Also it is this place that <code>onPreExecute()</code> is called from, which calls <code>onPreExecute()</code> of our instance of <code>AsyncTask.</code></p>
 
-<p>Now, the <code>params</code> that are passed with <code>AsyncTask</code> are set in the <code>Callable(mWorker)</code>. And then the most important part happens i.e the <code>Executor(sDefaultExecutor)</code> executes the <code>FutureTask(mFuture)</code>. Note that the <code>SerialExecutor</code> used here is static and hence the same one will be used across all <code>AsyncTask</code> instances.</p>
+<p>Now, the <code>params</code> that are passed with <code>AsyncTask</code> are set in the <code>Callable(mWorker)</code>. And then the most important part of <code>Asynctask</code> happens here i.e the <code>Executor(sDefaultExecutor)</code> executes the <code>FutureTask(mFuture)</code>. Note that the <code>SerialExecutor</code> used here is static and hence the same one will be used across all <code>AsyncTask</code> instances.</p>
 
 <p><code>SerialExecutor</code> maintains an <code>ArrayDeque</code> of <code>Runnable(mTasks)</code> . So when we say <code>executor.execute()</code>,it inserts the <code>FutureTask(mFuture)</code>at the end of the queue(mTasks). That task is extracted from the queue and it is executed by  <code>ThreadPoolExecutor(THREAD_POOL_EXECUTOR)</code>.</p>
 
@@ -142,7 +142,7 @@
 
 <p>For <code>AsyncTask</code> we have also a function <code>get()</code> which returns the result calculated from <code>doInBackground()</code>. This internally calls <code>mFuture.get()</code> which gives the result computed by the <code>FutureTask</code>. It is a blocking call and it will wait if it is called and the result has not been calculated.</p>
 
-<p>Finally, there is <code>cancel(boolean mayInterruptIfRunning)</code> function available in <code>AsyncTask</code>. Calling this will call <code>mFuture.cancel()</code> and a flag is set.Quoting from the docs itself, if the task has not been started yet and a call to <code>cancel()</code> is made,the task will never start. If the task is already running, then the parameter <code>mayInterruptIfRunning</code> determines whether the thread executing this task should be interrupted or not. If the task is cancelled, then <code>onPostExecute()</code> will never be called. Details of how a running thread can stops its execution can be seen <a href="https://10kloc.wordpress.com/2013/12/24/cancelling-tasks-in-executors/">here</a></p>
+<p>Finally, there is <code>cancel(boolean mayInterruptIfRunning)</code> function available in <code>AsyncTask</code>. Calling this will call <code>mFuture.cancel()</code> and a flag is set.Quoting from the docs itself, if the task has not been started yet and a call to <code>cancel()</code> is made,the task will never start. If the task is already running, then the parameter <code>mayInterruptIfRunning</code> determines whether the thread executing this task should be interrupted or not. If the task is cancelled, then <code>onPostExecute()</code> will never be called.</p>
 
 
 

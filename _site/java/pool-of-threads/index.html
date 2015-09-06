@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=RobotoDraft:300,400|Inconsolata:400,700"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/postcss.css"/>
+ </head>
+
+  <body>
+    <div class="header">
+    </div>
+
+    <div id="content">
+
+          <h1 class="page-title">Diving in a pool of threads</h1>
+          <div class="page-description">Thread pool and its manager</div>
+          <div class="post-details">
+
+            <img src="/images/pic_square.png">
+            <div class="post-author">
+              By Rahul Raja
+            </div>
+            <div class="post-date">September 01, 2015</div>
+
+          </div>
+
+
+          <p>This post is about Thread Pools, their use cases and how to handle them.
+<br /><br /></p>
+
+<h2 id="thread-pools">Thread Pools</h2>
+<p>So as its clear from its name,its a pool of threads.But why do we need a pool of threads for executing a task or a set of tasks? Can’t we just start a new <code>Thread</code> for whatever task i feel? And if there are multiple tasks, then we can use multiple threads right?
+<br /><br />
+Yes we can obviously do that, but to complicate(to simplify) lives(things), we have thread pools.
+There is a performance overhead associated with starting a new thread, and each thread is also allocated some memory for its stack etc. So when we have a large number of tasks to execute and we want to manage the above stated issues , then Thread Pool is the best choice. It will allow to run multiple tasks in parallel and we can manage also to wait the execution of task until a thread from our pooled collection becomes available.
+<br /><br />
+So for a formal definition,a thread pool is a group of pre-instantiated threads that are ready for work. They are more suitable for executing large number of small tasks. This prevents the need of creating a thread large number of times. To create and manage these pools, we have its manager, <code>ThreadPoolExecutor</code>.</p>
+
+<h2 id="threadpoolexecutor">ThreadPoolExecutor</h2>
+<p>A Thread Pool is created and managed by functions provided by <code>ThreadPoolExecutor</code>. Before coming to <code>ThreadPoolExecutor</code>, there are two more components on which it is based upon.</p>
+
+<h3 id="executor">Executor</h3>
+<p>Its nothing but just an interface which provides a method <code>execute(Runnable r)</code> in which you can write your own
+implementations to execute a task.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">Executor</span> <span class="o">{</span>
+    <span class="kt">void</span> <span class="nf">execute</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">command</span><span class="o">);</span>
+<span class="o">}</span></code></pre></div>
+
+<p>It just provides a way of abstracting the task running mechanism. Users just need to call <code>Executor.execute()</code>   and they are done.</p>
+
+<h3 id="executorservice">ExecutorService</h3>
+<p><code>ExecutorService</code> is just an <code>Executor</code> with some extra functionalities.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">ExecutorService</span> <span class="kd">extends</span> <span class="n">Executor</span> <span class="o">{</span>
+
+  <span class="c1">// methods to control the executor</span>
+<span class="o">}</span></code></pre></div>
+
+<p>These extra functionalities provides methods like to shut down an <code>Executor</code>( so that it will reject the new incoming tasks),to return a <code>Future</code> so that we can keep progress on the submitted tasks etc.
+<br /><br />
+Now lets make a Thread Pool and see what can we do with them and also how those things are done internally.</p>
+
+
+
+    </div>
+
+    <div class="footer">
+          <ul class="profile-links">
+
+      <li title="GitHub">
+        <a target="_blank" href="https://github.com/rahulrj">
+          <i class="fa fa-github"></i>
+        </a>
+      </li>
+      <li title="LinkedIn">
+        <a target="_blank" href="https://in.linkedin.com/pub/rahul-raja/59/336/57b">
+          <i class="fa fa-linkedin"></i>
+        </a>
+      </li>
+      <li title="Stackoverflow">
+        <a target="_blank" href="http://stackoverflow.com/users/3292108/diffy">
+          <i class="fa fa-stack-overflow"></i>
+        </a>
+      </li>
+
+      <li title="Facebook">
+        <a target="_blank" href="https://www.facebook.com/rahul.raja.963">
+          <i class="fa fa-facebook"></i>
+        </a>
+      </li>
+      </ul>
+
+    </div>
+
+
+    </body>
+</html>
