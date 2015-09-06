@@ -15,7 +15,7 @@ it didn't change anything much for me.
 
 ## What was SPDY
 It sounded a bit strange that a single TCP connection was capable of handling only 1 HTTP request at a time.There is no
-concurrency involved here.So for the browser to fetch multiple resources at once,it will have to open multiple TCP connections per host. So most of the browsers(including chrome) have the limitation of opening a max of 6 TCP connections for a host. That means if you have a host and you fire 7 downloads from it at the same time from the same browser, the 7th one will wait until one of them is successfully downloaded.
+concurrency involved here.So for the browser to achieve concurrency and fetch multiple resources at once,it will have to open multiple TCP connections per host. So most of the browsers(including chrome) have the limitation of opening a max of 6 TCP connections for a host. That means if you have a host and you fire 7 downloads from it at the same time from the same browser, the 7th one will wait until one of them is successfully downloaded.
 <br><br>
 This was one of the several glaring flaws that existed in HTTP/1.X. As it was formulated in 1999 and continued for about
 another 15 years, it was really a time to improve it in certain aspects to fit the current needs. So Google took the responsibility upon **herself** and came out with SPDY. IETF,after some time started with HTTP/2 considering SPDY as its base and they improved on SPDY by taking the inputs from the community and the implementors of HTTP clients of various other languages. Thereafter,Google decided to deprecate SPDY and support HTTP/2 only with both Google's lead SPDY engineers Mike Belshe and Roberto Peon working on the HTTP/2 implementation.
@@ -27,14 +27,14 @@ HTTP/2 is not a replacement for HTTP but as its name suggests, just few more fun
 
 ### Multiplexed requests and response
 
-With pipelining,the browser can send multiple requests in a single TCP stream but it imposes a condition that the server should
-send the response in the same order as the received requests. If if the previous request is taking too much of time, the server
+With pipelining of course,the browser can send multiple requests in a single TCP stream but it imposes a condition that the server should
+send the response in the same order as the received requests. If the previous request is taking too much of time, the server
 cant send the response of a request which arrived later than the previous one even if its response has been calculated. This is
-HOL blocking. Pipelining is illustrated by the below image (taken from WIKI).
+HOL ( Head Of Line ) blocking. Pipelining is illustrated by the below image (taken from WIKI).
 
 ![alt text][logo]
 
-HOL blocking prevents pipelining's implementation and use in the major browsers. HTTP/2 allows for unlimited concurrent streams
+HOL blocking prevents pipelining's implementation and use in the major browsers. But HTTP/2 solves this issue and  allows for unlimited concurrent streams
 over a single TCP connection.
 
 ### Header compression
@@ -50,7 +50,7 @@ According to the HTTP/2 spec, there are a number of issues to handle in case of 
 for text and binary.Obviously text protocols were designed because it was easier for us to read or interpret.Speed and latency was not given the top priority in that case. But now since every millisecond counts in case of serving web pages, a binary protocol is the need of the hour.
 
 ### Server push
-Generally what happens in case of HTTP is a client requests a resource from a server and if there are multiple resources present in that page, then again a request is made individually for fetching each of the resource.
+Generally what happens in case of HTTP is that a client requests a resource from a server and if there are multiple resources present in that page, then again a request is made by the client individually for fetching each of the resource.
 But since the server while sending the first page already knows what extra resources the client will need, then why
 cant the server send all the resources in a single request? This is actually server push.
 <br>

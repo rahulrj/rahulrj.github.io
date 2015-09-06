@@ -38,21 +38,21 @@
      <span class="n">at</span> <span class="n">android</span><span class="o">.</span><span class="na">widget</span><span class="o">.</span><span class="na">Toast</span><span class="o">.</span><span class="na">makeText</span><span class="o">(</span><span class="n">Toast</span><span class="o">.</span><span class="na">java</span><span class="o">:</span><span class="mi">231</span><span class="o">)</span></code></pre></div>
 
 <p>A thing to wonder is that why can’t it just say that “You cannot display a Toast on a worker thread”. What does the first line
-of the exception mean? ( Thank god there is StackOflw for just copying the answer without actually knowing how it solves the problem and in some cases what was the problem). The first line of exception isnt decipherable unless i know what a <code>Looper</code> and <code>Handler</code> is. And i also looked into how they have been implemented in Android.</p>
+of the exception mean? ( Thank god there is StackOflw for just copying the answer without actually knowing how it solves the problem and in some cases what was the problem). The first line of exception isnt decipherable unless i know what a <code>Looper</code> and <code>Handler</code> is. So i looked into that and also looked into how they have been implemented in Android.</p>
 
 <h2 id="what-exactly-is-looper">What exactly is Looper</h2>
 <p>A <code>Looper</code> can be thought of as a Message Queue. <code>MessageQueue</code> is actually also a class that that has been created in
-Android which <code>Looper</code> uses internally. However it lets take it as a simple <code>Queue</code> which can contain <code>Message</code> objects. <code>Message</code> is the component in which you can wrap anything and send it to a <code>Handler</code>.  <code>Looper</code> class
+Android which <code>Looper</code> uses internally. However lets take it as a simple <code>Queue</code> which can contain <code>Message</code> objects. <code>Message</code> is the component in which you can wrap anything and send it to a <code>Handler</code> for processing.  <code>Looper</code> class
 provides methods to loop over that queue and process the messages in it.
 <br /><br />
-As an example, suppose we have a worker thread and we want to send some data from it to the main thread. Then what should be done? We will simply send the data to the UI thread’s <code>MessageQueue</code> and the its looper will process the <code>MessageQueue</code> and execute the tasks. These are the steps
+As an example, suppose we have a worker thread and we want to send some data from it to the main thread. Then what should be done? We will simply send the data to the UI thread’s <code>MessageQueue</code> and the its looper will process the <code>MessageQueue</code> and execute the tasks( using a <code>Handler</code>). These are the steps for passing the data
 <br /><br />
 1. The UI thread has a <code>Looper</code> by default. So we will create a <code>Handler</code> in the main thread. While instantiating
-   the handler, it will associate the handler with the looper(lets say it as a MessageQueue for now) of the main thread</p>
+   the handler, it will associate the created handler with the looper(lets say it as a MessageQueue for now) of the main thread</p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="n">Handler</span> <span class="n">handler</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Handler</span><span class="o">();</span></code></pre></div>
 
-<p>And of course, there is only one <code>Looper</code> that can be created per thread. Since there is already a <code>Looper</code>  associated with the UI thread, it will throw exception when you will try to call <code>Looper.prepare()</code> on it.
+<p>And of course, there is only one <code>Looper</code> that can be created per thread. Since there is already a <code>Looper</code>  associated with the UI thread, it will throw exception when you will try to call <code>Looper.prepare()</code> on it. So you can create a <code>Looper</code> on any other thread but  not on the main thread.
   <br /><br />
 2. Using the above created <code>Handler</code> and its post() method, post a Runnable( which contains a task to be executed in
    the UI thread) to the <code>MessageQueue</code>.</p>
@@ -62,15 +62,17 @@ As an example, suppose we have a worker thread and we want to send some data fro
           <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{}</span>
    <span class="o">});</span></code></pre></div>
 
-<p>Now the Looper of the UI thread will loop through this queue and process the tasks that are present.</p>
+<p>It will post the message to the queue of the UI thread beacuse this handler is associated with the <code>Looper</code> of UI thread.
+   Now the Looper of the UI thread will loop through this queue and process the tasks that are present.</p>
 
 <h2 id="implementation-of-looper">Implementation of Looper</h2>
 
 <h3 id="looper-functioning">Looper functioning</h3>
 
-<p>Since a <code>Looper</code> is specific to a particular thread,so it internally uses a <code>ThreadLocal</code> object for storing
-the information about a thread. <code>ThreadLocal</code> as the name suggests, is an object which is local to every thread accessing this object. So suppose you create a <code>ThreadLocal</code> object and have 2 threads accessing it, then each thread can do <code>get()</code> and <code>set()</code> on this object separately and the value set by one thread will remain local to that thread only.
-<code>Looper.prepare()</code> is implemented as</p>
+<p>This is how a <code>Looper</code> has been implemented internally in Android.<br />
+Since a <code>Looper</code> belongs specifically to a particular thread,so it internally uses a <code>ThreadLocal</code> object for storing
+the information about that thread. <code>ThreadLocal</code> as the name suggests, is an object which is local to every thread accessing this object. So suppose you create a <code>ThreadLocal</code> object and have 2 threads accessing it, then each thread can do <code>get()</code> and <code>set()</code> on this object separately and the value set by one thread will remain local to that thread only. <code>ThreadLocal</code> saves the reference to a thread and its associated value in a HashMap like data-strcuture. <br />
+Now coming back to <code>Looper</code>,<code>Looper.prepare()</code> is implemented as</p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">prepare</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">quitAllowed</span><span class="o">)</span> <span class="o">{</span>
         <span class="k">if</span> <span class="o">(</span><span class="n">sThreadLocal</span><span class="o">.</span><span class="na">get</span><span class="o">()</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
@@ -79,7 +81,7 @@ the information about a thread. <code>ThreadLocal</code> as the name suggests, i
         <span class="n">sThreadLocal</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="k">new</span> <span class="nf">Looper</span><span class="o">(</span><span class="n">quitAllowed</span><span class="o">));</span>
     <span class="o">}</span></code></pre></div>
 
-<p>So the threadlocal’s value is set as the instance of the <code>Looper</code>. Also a new instance of <code>MessageQueue</code> ,which is the soul of a <code>Looper</code> is created in its constructor.(<code>quitAllowed</code> is a boolean used internally in MessageQueue).
+<p>So the threadlocal’s value is set as the instance of the <code>Looper</code>. Also a new instance of <code>MessageQueue</code> ,which is the soul of a <code>Looper</code> is created further in its constructor.(<code>quitAllowed</code> is a boolean used internally in MessageQueue).
 There is also a function <code>prepareMainLooper()</code> which is used by Android internally to initialize the <code>Looper</code> for
 UI thread. So we dont need to call this function at all.
 <br /><br />
@@ -91,8 +93,8 @@ processing to its corresponding <code>Handler</code> using</p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">message</span><span class="o">.</span><span class="na">target</span><span class="o">.</span><span class="na">handleMessage</span><span class="o">(</span><span class="n">message</span><span class="o">);</span></code></pre></div>
 
-<p>Every <code>Message</code> object holds a reference to its corresponding <code>Handler</code>. So <code>target</code> here refers to that <code>Handler</code>.In any case when <code>next()</code> returns <code>NULL</code>, then then <code>MessageQueue</code> quits. Afer a <code>Message</code>
-has been dispatched, all its variables are cleared( it is recycled ).</p>
+<p>Every <code>Message</code> object holds a reference to its corresponding <code>Handler</code>. So <code>target</code> here refers to that <code>Handler</code>. After a <code>Message</code>
+has been dispatched, all its variables are cleared( it is recycled ).In any case when <code>next()</code> returns <code>NULL</code>, then the loop ends and <code>MessageQueue</code> quits.</p>
 
 <h3 id="quitting-the-looper">Quitting the Looper</h3>
 
@@ -104,10 +106,10 @@ cannot be called again.</p>
 
 <h3 id="sync-barrier">Sync Barrier</h3>
 
-<p>Another useful thing in <code>Looper</code> is <code>postSyncBarrier()</code>. So if you have started the loop,and sometimes
+<p>Another useful thing ( sometimes )in <code>Looper</code> is <code>postSyncBarrier()</code>. So if you have started the loop,and sometimes
 you want that the messages in the queue should not be processed until a particular condition is satisfied,you can block
 the process using this function. But again you have to unblock this operation using <code>removeSyncBarrier(int token)</code>,
-with the token that you get in <code>postSyncBarrier()</code> otherwise the system will hang. As the name suggests,this blocking/unblocking works only in case of synchronous messages (where ack. is required). An example could be like
+with the token that you get in <code>postSyncBarrier()</code> otherwise the system will hang. As the name suggests,this blocking/unblocking works only in case of synchronous messages (where ack. is required). An example for this function could be like
 in the UI thread, block all messages until the view is rendered.
 <br /><br />
 And to answer the question at the beginning, actually <code>Toast</code> uses a <code>Handler</code> internally in <code>TN</code> class.
