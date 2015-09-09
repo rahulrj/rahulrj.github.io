@@ -52,7 +52,7 @@ implementations to execute a task.</p>
     <span class="kt">void</span> <span class="nf">execute</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">command</span><span class="o">);</span>
 <span class="o">}</span></code></pre></div>
 
-<p>It just provides a way of abstracting the task running mechanism. Users just need to call <code>Executor.execute()</code>   and they are done.</p>
+<p>It just provides a way of abstracting the task running mechanism. Users just need to call <code>Executor.execute(r)</code>   and they are done. The <code>execute()</code> will handle all the implementation details.</p>
 
 <h3 id="executorservice">ExecutorService</h3>
 <p><code>ExecutorService</code> is just an <code>Executor</code> with some extra functionalities.</p>
@@ -65,12 +65,12 @@ implementations to execute a task.</p>
 <p>These extra functionalities provides methods like to shut down an <code>Executor</code>( so that it will reject the new incoming tasks),to return a <code>Future</code> so that we can keep progress on the submitted tasks etc.
 <br /><br />
 Now lets make a Thread Pool and see what can we do with them and also how those things are done internally.
-While there are factory methods provided by ```Executors`` class to create thread pool, we will take the hard path of
-calling its constructor. The constructor initializes some pretty obvious things.So what do you think would be required in this process?</p>
+While there are factory methods provided by <code>Executors</code> class to create thread pool, we will take the hard path of
+calling its constructor. I would omit the constructor syntax here but but lets see what it does. The constructor initializes some pretty obvious things.So what do you think would be required in this process?</p>
 
 <p>-&gt; <strong>A container for holding the tasks</strong> -  Suppose you have a pool of 5 threads and all of them are busy and you give          them a 6th task to execute.So for holding those tasks, a queue is used.In this case a <code>LinkedBlockingQueue</code> is used.The head of the queue is that element that has been in the queue the longest time. The tail of the queue is that element that has been on the queue the shortest time.
 <br /><br />
--&gt; <strong>Now where are the threads coming from</strong> - Here threads will come from a factory.Literally its called a <code>ThreadFactory</code>. Its an interface which is used to create new threads <strong>on-demand</strong></p>
+-&gt; <strong>Now where will the threads come from</strong> - Here threads will come from a factory.Literally its called a <code>ThreadFactory</code>. Its an interface which is used to create new threads <strong>on-demand</strong></p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">ThreadFactory</span> <span class="o">{</span>
 
@@ -80,16 +80,56 @@ calling its constructor. The constructor initializes some pretty obvious things.
 <p>So here the implementations can define things like priority,status etc for the newly created thread. Java uses <code>DefaultThreadFactory</code> here which creates non-daemon threads with normal priority.
 <br /><br />
 -&gt; <strong>What is the size of this pool</strong> - Its defined by two parameters that has to be supplied in the constructor.
-<code>corePoolSize</code> is  the no of threads that will be there in the pool even even they are lying idle(this is also configurable. No need to leave the thread idle). <code>maxPoolSizeMax</code> is the max  number of threads to allow in the pool.
+<code>corePoolSize</code> is  the no of threads that will be there in the pool even even they are lying idle(this is also configurable. No need to leave the threads idle). <code>maxPoolSizeMax</code> is the max  number of threads to allow in the pool.
 When a new task is submitted in method <code>execute(Runnable)</code>, and fewer than <code>corePoolSize</code> threads are running, a new thread is  created to handle the request, even if other worker threads are idle.  If there are more than <code>corePoolSize</code> but less than <code>maximumPoolSize</code> threads running, a new thread will be created only if the queue is full.</p>
 
-<p>The number of non-core idle threads in the pool can also be reduced through <code>keepAliveTimeUnit</code> (supplied in the constructor ) and core idle thread by <code>allowCoreThreadTimeout(boolean b)</code>.
+<p>The number of non-core idle threads in the pool can also be reduced through <code>keepAliveTimeUnit</code> (supplied in the constructor ) and the same for core idle threads can be done by <code>allowCoreThreadTimeout(boolean b)</code>.
 <br /><br />
 -&gt; <strong>Something for handling the rejected tasks</strong> - When tasks are supplied even after the <code>ThreadPoolExecutor</code> is shut down or when the queue is full, they are rejected. For handling the rejected tasks, we have <code>RejectedExecutionHandler</code>. Its not an Android <code>Handler</code> but just a literal handler for handling the tasks.Its just an interface with a method</p>
 
 <div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">void</span> <span class="nf">rejectedExecution</span><span class="o">(</span><span class="n">Runnable</span> <span class="n">r</span><span class="o">,</span> <span class="n">ThreadPoolExecutor</span> <span class="n">executor</span><span class="o">);</span></code></pre></div>
 
 <p>The default <code>RejectedExecutionHandler</code> used here just throws an exception when any task is rejected. There are other REHs available for use like <code>DiscardPolicy</code> and <code>DiscardOldestPolicy</code>. Of course we can also create our own and supply it in <code>setRejectedExecutionHandler (RejectedExecutionHandler)</code>.</p>
+
+<h2 id="how-the-execution-happens">How the Execution happens</h2>
+<p>Internally, there is no magic happening but the same basic operations that you can think of like polling the queue, creating a thread when core threads are insufficient and interrupting the thread when <code>shutdown()</code> is called.
+I will touch on these internal things a bit.</p>
+
+<h3 id="bit-packing">Bit packing</h3>
+
+<p>A <code>ThreadPoolExecutor</code> has 5 states internally called <code>runState</code> i.e RUNNING, SHUTDOWN, STOP, TIDYING and TERMINATED and i will describe how it reaches these states. Also it has a property <code>workerCount</code>(effective no. of threads). These two variables are packed into a single Integer. This is one of the interesting things here. Packing multiple variables into a single one saves us a lot of memory and gives us an easy way of setting and getting these states. For example, 8 booleans can be packed into a single <code>unsigned char</code> of 8 bytes by setting 1 bit corresponding to each boolean. In <code>ThreadPoolExecutor</code>, 3 higher order bits are kept for states while the remaining 29 bits are for representing the number of worker thread count. The thread control state variable <code>ctl</code> is</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">ctl</span><span class="o">=</span><span class="n">runState</span> <span class="o">|</span> <span class="n">workerCount</span> <span class="o">;</span>
+<span class="n">where</span> <span class="n">runState</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="mi">3</span> <span class="o">&gt;&gt;</span> <span class="mi">29</span> <span class="k">for</span> <span class="n">respective</span> <span class="n">states</span><span class="o">.</span></code></pre></div>
+
+<p>Now since <code>workerCount</code> is stored in the lower 29 bits, if you want to retrieve the value of <code>workerCount</code> at any time, just do a bitwise AND of <code>ctl</code> with 00011111…1 (32 bits).</p>
+
+<h3 id="workers">Workers</h3>
+<p>Now one could have simply created threads when needed and store them somewhere in a HashMap if they are lying idle or executing. And if we want to shutdown the executor, then interrupt all the threads in the HashMap. But this approach has some limitations. What if we want to avoid firing <code>Thread.interrupt()</code> for threads which have not even been started? What if we want to wake up the idle threads using our interrupts rather than stopping the execution of running threads?
+<br /><br />
+For solving these problems, we need to maintain a <strong>state</strong> of each <code>Thread</code> and we also need an efficient locking mechanism while executing these threads. So we have a <code>Worker</code> class which extends from <code>AbstractQueuedSynchronizer</code>. Now <code>AbstractQueuedSynchronizer</code> serves here as a base for implementing a non-reentrant locking system and also it helps in maintaining the state of each thread.</p>
+
+<p>Each <code>Worker</code> object maintains its own <code>Thread</code>, which is created by <code>ThreadFactory</code>. So basically if a new <code>Thread</code> is needed anywhere means we have to create a new <code>Worker</code> object. As stated above, it is needed to maintain the interrupt states of its <code>Thread</code>. A thread here has three states</p>
+
+<ul>
+  <li>-1 -&gt; the thread has not been started.</li>
+  <li>0 -&gt; the thread is lying idle</li>
+  <li>1 -&gt; the thread is executing some task</li>
+</ul>
+
+<p>These state are pretty useful for usecases in which an action is needed to be performed only on certain threads. We will see how they help in both execution and shutdown of the executor.</p>
+
+<h3 id="executing-a-runnable">Executing a Runnable</h3>
+<p>Now with all the above concepts in hand, its not hard to think what going on when we fire <code>execute(Runnable r)</code>. Its very clear from the Java’s source code also but i will write it in short.</p>
+
+<ol>
+  <li>Check if no. of <code>workerCount</code>&lt;<code>corePoolSize</code>.If yes, then add a <code>worker</code>, start its thread with the runnable given and put  the worker in a <code>HashSet</code>.</li>
+  <li>If its unable to add a <code>worker</code>, then try putting it the <code>workQueue</code>.</li>
+  <li>If putting it in the queue also fails, then again try adding a <code>worker</code>( with pool limit as <code>maxPoolSizeMax</code>).If that also fails, then reject the runnable.</li>
+</ol>
+
+<h3 id="shutdown-and-shutdownnow">shutDown() and shutDownNow()</h3>
+<p>In <code>shutDown()</code> only the idle workers are interrupted( means ongoing tasks can be finished) while in <code>shutDownNow()</code>, all the workers are interrupted and tasks are removed from the queue instantaneously. How the idle workers are identified? Using the state as ‘0’.</p>
 
 
 
