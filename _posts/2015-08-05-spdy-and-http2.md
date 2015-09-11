@@ -1,9 +1,7 @@
 ---
 layout: post
 title: "SPYDing the web"
-description: "It was the first time i looked into the source code of an Android component deeply.I wrote it
-long back before this blog was made.Found it very interesting and now digging into the source code of every
-other thing has become a habit."
+description: "Some thing about SPDY and HTTP/2. I had heard a lot about both these two and it was time to go explore them."
 category: web
 tags: [Threads, AsyncTask, Android]
 subheading: What was SPDY and what is HTTP/2

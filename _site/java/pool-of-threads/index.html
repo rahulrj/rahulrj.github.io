@@ -124,12 +124,16 @@ For solving these problems, we need to maintain a <strong>state</strong> of each
 
 <ol>
   <li>Check if no. of <code>workerCount</code>&lt;<code>corePoolSize</code>.If yes, then add a <code>worker</code>, start its thread with the runnable given and put  the worker in a <code>HashSet</code>.</li>
-  <li>If its unable to add a <code>worker</code>, then try putting it the <code>workQueue</code>.</li>
-  <li>If putting it in the queue also fails, then again try adding a <code>worker</code>( with pool limit as <code>maxPoolSizeMax</code>).If that also fails, then reject the runnable.</li>
+  <li>If its unable to add a <code>worker</code>, then try putting it in the <code>workQueue</code>.</li>
+  <li>If putting it in the queue also fails, then again try adding a <code>worker</code>( with pool limit as <code>maxPoolSizeMax</code>).If that also fails, then reject the runnable.
+<br /><br />
+After the task is executed by the thread, it polls the queue to check if there are more runnables lying there. This check is done in an infinite loop with loop continuing every time a timeout happens in the poll.</li>
 </ol>
 
 <h3 id="shutdown-and-shutdownnow">shutDown() and shutDownNow()</h3>
-<p>In <code>shutDown()</code> only the idle workers are interrupted( means ongoing tasks can be finished) while in <code>shutDownNow()</code>, all the workers are interrupted and tasks are removed from the queue instantaneously. How the idle workers are identified? Using the state as ‘0’.</p>
+<p>In <code>shutDown()</code> only the idle workers are interrupted( means ongoing tasks can be finished) while in <code>shutDownNow()</code>, all the workers are interrupted and tasks are removed from the queue instantaneously. How the idle workers are identified? Using the state as ‘0’.
+<br /><br />
+There is a function <code>tryTerminate()</code> which is called everytime an attempt to shutdown the executor is made or the process of adding a worker thread fails or a worker is terminated. The function is a pretty necessary thing in these cases, because one of the reason is that it moves the state of the executor to <code>TERMINATED</code> and secondly, it wakes up all the waiting threads that are waiting on any of the reentrant locks. In all these cases, it checks if the executor can be terminated or not.If it can be, then it does that.So overall these things takes care of thread blocking and cleaning very nicely. </p>
 
 
 

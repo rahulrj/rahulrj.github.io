@@ -98,8 +98,12 @@ These state are pretty useful for usecases in which an action is needed to be pe
 Now with all the above concepts in hand, its not hard to think what going on when we fire `execute(Runnable r)`. Its very clear from the Java's source code also but i will write it in short.
 
 1. Check if no. of `workerCount`<`corePoolSize`.If yes, then add a `worker`, start its thread with the runnable given and put  the worker in a `HashSet`.
-1. If its unable to add a `worker`, then try putting it the `workQueue`.
+1. If its unable to add a `worker`, then try putting it in the `workQueue`.
 1. If putting it in the queue also fails, then again try adding a `worker`( with pool limit as `maxPoolSizeMax`).If that also fails, then reject the runnable.
+<br><br>
+After the task is executed by the thread, it polls the queue to check if there are more runnables lying there. This check is done in an infinite loop with loop continuing every time a timeout happens in the poll.
 
 ### shutDown() and shutDownNow()
 In `shutDown()` only the idle workers are interrupted( means ongoing tasks can be finished) while in `shutDownNow()`, all the workers are interrupted and tasks are removed from the queue instantaneously. How the idle workers are identified? Using the state as '0'.
+<br><br>
+There is a function `tryTerminate()` which is called everytime an attempt to shutdown the executor is made or the process of adding a worker thread fails or a worker is terminated. The function is a pretty necessary thing in these cases, because one of the reason is that it moves the state of the executor to `TERMINATED` and secondly, it wakes up all the waiting threads that are waiting on any of the reentrant locks. In all these cases, it checks if the executor can be terminated or not.If it can be, then it does that.So overall these things takes care of thread blocking and cleaning very nicely. 
