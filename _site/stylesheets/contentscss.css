@@ -154,8 +154,9 @@ span.reldate {
     left: 40%;
     overflow: hidden;
     position: absolute;
-    margin-bottom: 60px;
-    margin-top: 60px;
+    /*margin-bottom: 60px;
+    margin-top: 60px;*/
+    bottom: 5%;
 }
 
 .footer li{
@@ -190,19 +191,23 @@ span.reldate {
 #content{
 
     margin-left: 10%;
+    margin-right: 5%;
 
    }
    h1{
      font-size: 30px;
    }
    .footer{
-     left: 18%;
+     left: 10%;
    }
    h2{
      font-size: 22px;
    }
    body{
      font-size: 16px;
+   }
+   .post-date{
+     margin-left: 0px;
    }
 
 }

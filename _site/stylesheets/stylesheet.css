@@ -2,6 +2,10 @@
 h2 {
     margin-top: 40px
 }*/
+
+html{
+  overflow-x: hidden;
+}
 h1{
 
   margin: 0px;
@@ -229,12 +233,17 @@ span.reldate {
 @media screen and (max-width: 768px){
 .site-header {
 
-    left:18%;
+    left:10%;
 
    }
-   .footer{
-     left:11%;
+   .categories{
+     left: 10%;
+     margin-top: 70px;
    }
+   .footer{
+     left:10%;
+   }
+
 }
 
 /*dl,
