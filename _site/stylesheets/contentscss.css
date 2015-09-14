@@ -159,6 +159,16 @@ span.reldate {
     bottom: 5%;
 }
 
+.footer{
+
+    left: 40%;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 50px;
+    margin-top: 100px;
+
+}
+
 .footer li{
 
     background-color: #333;
