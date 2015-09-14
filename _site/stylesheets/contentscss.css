@@ -163,9 +163,9 @@ span.reldate {
 
     left: 40%;
     overflow: hidden;
-    position: relative;
-    margin-bottom: 50px;
-    margin-top: 100px;
+    position: absolute;
+    margin-bottom: 10px;
+
 
 }
 
@@ -209,7 +209,9 @@ span.reldate {
    }
    .footer{
      left: 10%;
-     margin-bottom: 20px;
+     overflow: hidden;
+     position: relative;
+     margin-top: 150px;
    }
    h2{
      font-size: 22px;
