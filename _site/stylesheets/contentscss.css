@@ -209,6 +209,7 @@ span.reldate {
    }
    .footer{
      left: 10%;
+     margin-bottom: 20px;
    }
    h2{
      font-size: 22px;
