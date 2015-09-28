@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=RobotoDraft:300,400|Inconsolata:400,700"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/postcss.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+ </head>
+
+  <body>
+    <div class="header">
+    </div>
+
+    <div id="content">
+
+          <h1 class="page-title">Yahoo News Digest Animations</h1>
+          <div class="page-description">On-boarding animations of Yahoo News Digest App</div>
+          <div class="post-details">
+
+            <img src="/images/pic_square.png">
+            <div class="post-author">
+              By Rahul Raja
+            </div>
+            <div class="post-date">September 25, 2015</div>
+
+          </div>
+
+
+          <p>This week i tried my hands on some cool animations that comes bundled with the <a href="https://play.google.com/store/apps/details?id=com.yahoo.mobile.client.android.atom">Yahoo News Digest</a> Android app. I have not tried the  the app’s content but it has a very impressive UI and a slightly different news-reading experience unlike giving us 10-15  options to choose the category and read the news which most of the apps in the market provide. This experience is enriched by plethora of smooth transitions spread throughout the app.
+<br /><br />
+This project’s demo and code is available <a href="https://github.com/rahulrj/YahooNewsOnboarding">here</a>.
+<br /><br />
+                                               <img src="https://s3-us-west-2.amazonaws.com/helptestbucket/yahoo.gif" alt="" /></p>
+
+<h2 id="how-are-the-animations-designed">How are the animations designed?</h2>
+
+<h3 id="first-screen-animation">First screen animation</h3>
+<p>I did the  animation of the first page by using <code>ViewPager.PageTransformer</code>. The structure of this interface is</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">interface</span> <span class="nc">PageTransformer</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">transformPage</span><span class="o">(</span><span class="n">View</span> <span class="n">page</span><span class="o">,</span> <span class="kt">float</span> <span class="n">position</span><span class="o">);</span>
+<span class="o">}</span></code></pre></div>
+
+<p><code>transformPage(page,pos)</code> is called for the current page, and the pages adjacent to it at every point of the transition of <code>ViewPager</code>. The spheres in the first page all appear to be moving with different speeds on scrolling the <code>ViewPager</code>. This can be easily achieved if we assign a different X-value to each of the sphere’s position at every point of the scroll.
+<br /><br />
+So lets say the first page is shown on the screen and we drag the <code>ViewPager</code> towards the left. So first i restrict that this <code>transformPage</code> function should be called by only one page for this animation and not all pages. Because if all pages will call it, the spheres will have X-values. How i do this? Using the below <a href="https://github.com/rahulrj/YahooNewsOnboarding/blob/master/app/src/main/java/onboarding/yahoo/com/yahoonewsonboarding/MainActivity.java#L276">code</a></p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kt">void</span> <span class="nf">transformPage</span><span class="o">(</span><span class="n">View</span> <span class="n">page</span><span class="o">,</span> <span class="kt">float</span> <span class="n">position</span><span class="o">)</span> <span class="o">{</span>
+  <span class="kt">int</span> <span class="n">pageWidth</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="na">getWidth</span><span class="o">();</span>
+  <span class="k">if</span> <span class="o">(</span><span class="n">position</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span><span class="cm">/*do nothing*/</span><span class="o">}</span>
+
+  <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">position</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(!</span><span class="n">mSecondPageSelected</span> <span class="o">&amp;&amp;</span> <span class="n">page</span><span class="o">.</span><span class="na">findViewById</span><span class="o">(</span><span class="n">R</span><span class="o">.</span><span class="na">id</span><span class="o">.</span><span class="na">center_box_second</span><span class="o">)</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+              <span class="n">moveTheSpheres</span><span class="o">(</span><span class="n">position</span><span class="o">,</span> <span class="n">pageWidth</span><span class="o">);</span>
+         <span class="o">}</span>
+  <span class="o">}</span>
+  <span class="k">else</span> <span class="o">{</span><span class="cm">/*do nothing*/</span><span class="o">}</span>
+<span class="o">}</span></code></pre></div>
+
+<p>So this function will be called for the second page only when its <code>position</code> changes from 1 to 0 and 0 to 1. Now at each point in the transition,i change the X co-ordinates of the spheres using <code>setTranslationX(val)</code>.<a href="https://github.com/rahulrj/YahooNewsOnboarding/blob/master/app/src/main/java/onboarding/yahoo/com/yahoonewsonboarding/MainActivity.java#L300">(code)</a></p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">float</span> <span class="n">camcordPos</span> <span class="o">=</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span> <span class="o">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">position</span><span class="o">)</span> <span class="o">*</span> <span class="mf">0.15</span> <span class="o">*</span> <span class="n">pageWidth</span><span class="o">);</span>
+<span class="n">mCamcordImage</span><span class="o">.</span><span class="na">setTranslationX</span><span class="o">(</span><span class="n">camcordPos</span><span class="o">);</span></code></pre></div>
+
+<p>So it appears to be moving as we scroll. If we want a relatively higher speed than the above example, just change the value 0.15 to a higher value.</p>
+
+<h3 id="second-page-animation">Second page animation</h3>
+<p>Second page is all about drawing,erasing and redrawing on canvas. There are two views in it i.e <code>SunMoonView</code>, which is the trajectory for sun/moon and the other is <code>BookView</code>, which is the book and its animation.They can be made into a single view of course but just for simplicity, i made two different views.
+<br /><br />
+<strong>How does SunMoonView work ?</strong>
+<br />
+1. <a href="https://github.com/rahulrj/YahooNewsOnboarding/blob/master/app/src/main/java/onboarding/yahoo/com/yahoonewsonboarding/SunMoonView.java#L91">Create</a> a circular path using <code>Path.addArc()</code> and alternate its direction from clockwise to counter-clockwise when the drag direction changes. Initially,place both the bitmaps on the path by using <code>canvas.drawBitmap()</code>. The co-ordinates of the point where we want to place is obtained using <code>getPosTan()</code> of <code>PathMeasure</code> object mentioned in point 2.
+<br /><br />
+2. For <a href="https://github.com/rahulrj/YahooNewsOnboarding/blob/master/app/src/main/java/onboarding/yahoo/com/yahoonewsonboarding/SunMoonView.java#L112">translating</a> the bitmap on the path, i used a <code>PathMeasure</code> object. In the function <code>PathMeasure.getPosTan(distance, pos[], tan[])</code>, we supply the distance( the point on the path where we want to place the object) and it returns the co-ordinates of that position with respect to the screen in <code>pos</code> array. Now we can draw the bitmap at that co-ordinates. So when the page is scrolled,i just draw the bitmap at a point on the path. This point is determined according to the <code>position</code> argument of <code>PageTransformer</code>.
+<br /><br />
+In <code>BookView</code>, the book is drawn on the canvas using simple <code>canvas.drawRect()</code> and for giving it a fade effect to its lines, i change the alpha value of the <code>Paint</code> object over time, which gives it a fade-in effect.</p>
+
+<h3 id="third-page-animation">Third page animation</h3>
+<p>In third page, there are three animations. The first one is a simple rotate animation which i did using the same procedure as mentioned for the second screen. Second one is a translate animation for the spheres done using <code>PageTransformer</code>.
+<br /><br />
+The third animation occurs when the “Lets Go” button is pressed. That time, all the bitmaps go out for some distance and then they move inwards till they converge at the center of the circle. For this, again i have created 6 paths, one for each bitmap, which originates from the center of the circle and goes a little ahead of the current position of the bitmaps.
+<br />
+When the button is pressed,the latest position of each of the sphere is obtained from <a href="https://github.com/rahulrj/YahooNewsOnboarding/blob/master/app/src/main/java/onboarding/yahoo/com/yahoonewsonboarding/ThirdScreenView.java#L163">here</a></p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">float</span> <span class="n">pos</span><span class="o">[]</span> <span class="o">=</span> <span class="n">drawCircle</span><span class="o">(</span><span class="n">canvas</span><span class="o">,</span> <span class="n">mSphereOriginalPosArr</span><span class="o">[</span><span class="mi">0</span><span class="o">],</span> <span class="n">mSphereStepCountArr</span><span class="o">[</span><span class="mi">0</span><span class="o">],</span> <span class="n">mBitmap1</span><span class="o">);</span></code></pre></div>
+
+<p>This function returns the last drawn position for each bitmap. Now that ‘little ahead’ distance that i mentioned above is calculated using the simple projection formula.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">double</span> <span class="n">len</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">hypot</span><span class="o">((</span><span class="n">pos</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">-</span> <span class="mi">360</span><span class="o">),</span> <span class="o">(</span><span class="n">pos</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">-</span> <span class="mi">360</span><span class="o">));</span>
+<span class="kt">double</span> <span class="n">dx</span> <span class="o">=</span> <span class="o">(</span><span class="n">pos</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">-</span> <span class="mi">360</span><span class="o">)</span> <span class="o">/</span> <span class="n">len</span><span class="o">;</span>
+<span class="kt">double</span> <span class="n">dy</span> <span class="o">=</span> <span class="o">(</span><span class="n">pos</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">-</span> <span class="mi">360</span><span class="o">)</span> <span class="o">/</span> <span class="n">len</span><span class="o">;</span>
+<span class="n">x</span> <span class="o">=</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span> <span class="o">(</span><span class="n">pos</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">+</span> <span class="n">mTempDistanceX</span> <span class="o">*</span> <span class="n">dx</span><span class="o">);</span>
+<span class="n">y</span> <span class="o">=</span> <span class="o">(</span><span class="kt">float</span><span class="o">)</span> <span class="o">(</span><span class="n">pos</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">+</span> <span class="n">mTempDistanceY</span> <span class="o">*</span> <span class="n">dy</span><span class="o">);</span></code></pre></div>
+
+<p>where (360,360) is center of the circle and (pos[0],pos[1]) are the co-ordinates of the latest point of the sphere. Now for converging the spheres, all i do is translate the spheres on the drawn path. Since this is a closed path, it looks like the sphere are translating first outwards and then inwards.</p>
+
+
+
+    </div>
+
+
+
+
+    </body>
+</html>
