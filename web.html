@@ -20,9 +20,9 @@ permalink: web/
       	<h3>{{ post.date | date: '%Y' }}</h3>
 		</div>
 		{% else %}
-      {% capture year %}{{ post.date | date: '%Y' }}{% endcapture %}
-      {% capture nyear %}{{ post.next.date | date: '%Y' }}{% endcapture %}
-      {% if nyear and year != nyear and post.next.categories[0] == "web" %}
+			{% capture year %}{{ post.date | date: '%Y' }}{% endcapture %}
+      {% capture nyear %}{{ post.previous.date | date: '%Y' }}{% endcapture %}
+      {% if nyear and year != nyear %}
 				<div class="year-heading">
           <h3>{{ post.date | date: '%Y' }}</h3>
 			  </div>
@@ -39,6 +39,6 @@ permalink: web/
 		 <div class="post-description">
 			 {{ post.description }}
 		 </div>
-		</div>
+	 </div>
   {% endfor %}
 </ul>
