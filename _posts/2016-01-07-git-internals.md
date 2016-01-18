@@ -116,7 +116,7 @@ Here comes this classic interview question. The difference between reset and rev
 
 &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;![alt text][git_reset]
 
-**-** The second above below is an example of `git revert`. Suppose in the above history we want to remove the changes of C2. Then we will simply do `git revert C2`. This will actually create another commit(C2') which will just remove the changes applied by `C2` and the commit(C2') is applied at the top of the project history. It doesn't alter any other commits before or after that.<br>
+**-** The second above below is an example of `git revert`. Suppose in the above history we want to remove the changes of `C2`. Then we will simply do `git revert C2`. This will actually create another commit(`C2'`) which will just remove the changes applied by `C2` and the commit(`C2'`) is applied at the top of the project history. It doesn't alter any other commits before or after that.<br>
 **-** The third image shows `git reset C2`. This command actually removes all the commits  after the `C2` and resets the project history to `C2`. But it will actually not remove all the changes done by those commits from  the working directory.This is quite a safe operation. But if we do `git reset --hard C2`, then it becomes a dangerous operation because it will remove all the commits after `C2` and their changes from the working directory. This of course is a dangerous way to undo things because unless its desirable,it can result in permanent loss of the commits and changes from the history.
 
 
