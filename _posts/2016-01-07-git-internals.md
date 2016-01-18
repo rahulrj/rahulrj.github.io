@@ -116,8 +116,8 @@ Now as we have seen that Git is nothing but a tree data structure whose nodes ar
 For example, suppose we do `git checkout test-branch`. Then this flow will happen<br>
 1. Git will check the entry in `refs/heads/test-branch` file. It will be pointing to a commit.<br>
 2. The commit in turn will be pointing to a tree which contains in turn points to all the trees and blobs that were present in the index when the commit was done.<br>
-2. Once we checkout a commit,the working directory will now have all the files and folders pointed by that commit and its lower commits. Git does this by traversing the complete tree and checking out the files. This is because the commit actually points out to the SHA1 of the blobs and the trees.<br>
-3. `HEAD` will get updated to point to the `test-branch`'s' most recent commit.<br>
+3. Once we checkout a commit,the working directory will now have all the files and folders pointed by that commit and its lower commits. Git does this by traversing the complete tree and checking out the files. This is because the commit actually points out to the SHA1 of the blobs and the trees.<br>
+4. `HEAD` will get updated to point to the `test-branch`'s' most recent commit.<br>
 
 Once all these trees and pointers are understood, other things like `git push`,`git pull`,`git fetch` etc can be easily thought of. Git contains several other advanced features like squashing several small commits into a larger commit, changing the order of commits,rewording commits etc but they all require a separate blog for each of them.
 
