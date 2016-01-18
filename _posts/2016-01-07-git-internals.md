@@ -65,7 +65,7 @@ Lets go into the flow of the above diagram.<br>
 
 ### Git merge
 Now merging of branches can happen in two ways. First is that there will be no merge commit created when we merge two branches. This is called **Fast Forward Merge**. In the other case, there is a merge commit created and we get some weird commit messages if we see it in SourceTree for example.<br><br>
-**- Fast forward merge -** In the above diagram, suppose we want to merge branch `test-branch2` into `master`. Now what git will do is it will simply move the `master` pointer from commit C2 to commit C4 resulting in a Fast Forward merge and both the branches now point to commit C4. So in the tree that is formed above in the diagram, if one commit can be reached from other commit by tracing its pointer, then a FF merge is possible. So C2 and C4 can be merged using FF merge.<br>
+**- Fast forward merge -** In the above diagram, suppose we want to merge branch `test-branch2` into `master`. Now what git will do is it will simply move the `master` pointer from commit C2 to commit C4 resulting in a Fast Forward merge and both the branches now point to commit C4. So in the tree that is formed above in the diagram, if one commit can be reached from other commit by tracing its pointer, then a FF merge is possible. So C2 and C4 can be merged using FF merge.<br><br>
 **- 3 Way Merge-** But suppose we want to merge `test-branch` into `test-branch2`. Now there is no direct path between C3 and C4 that we can follow. Both of them merge at C2, which is their common ancestor.So here git follows `3-way merge` using the nearest common ancestor(C2) of two branches. Here the common ancestor is also required in the merge process because suppose there are changes at the same line in both branches (C3 and C4). Without consulting the base-branch(C2) and checking the contents at the same line in the base branch, git wont be able to automatically resolve the conflict. As here there are 3 commits to be consulted, its called a 3 way merge. Suppose Git follows a 2 way merge and doesn't consult the base-branch, then it wont be able to resolve the conflicts automatically because it doesn't whether one or both branch has changed the content on the same line.So in this case a merge commit is created and it points to both the branches which has been merged.
 
 &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;![alt text][ff_merge]![alt text][3way_merge]
@@ -75,16 +75,17 @@ Rebasing is a method to escape the unwanted merge commits that we see when we do
 
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;![alt text][git_rebase]
 
-Considering the same graph and suppose now we want to rebase `test-branch` into `test-branch2`.<br>
+Considering the same graph(git branch graph)and suppose now we want to rebase `test-branch` into `test-branch2`.<br>
 **-** We checkout `test-branch2` and do `rebase test-branch` in it.<br>
-**-** Doing the above step 1 will take all the commits applied on `test-branch2` from the point `test-branch` and `test-branch2` have diverged(nearest common ancestor), and apply it one by one on `test-branch`. So after this,the tree looks like as the left tree above. `test-branch2` will now point to commit C4' and the commit C4 will be left dangling.<br>
+**-** Doing the above step will take all the commits(here its only C4) applied on `test-branch2` from the point `test-branch` and `test-branch2` have diverged(nearest common ancestor), and apply it one by one on `test-branch`. So after this,the tree looks like as the left image above. `test-branch2` will now point to commit C4' and the commit C4 will be left dangling.<br>
 **-** Now we can merge `test-branch` into `test-branch2` and it will be a `Fast Forward Merge` because the commits C3 can be directly reached from C4'. Doing a `FF merge` will take the tree structure to the point as illustrated in the right figure. This will give us a clean history without any merge commits.But ironically `rebase` is also a way to change the history as we did above in the tree.<br>
+**-** The commits which are left dangling are not deleted by Git.C4 will be eft untouched, and if something goes wrong with the rebase, we can go right back to the previous state.
 
 ### Git remotes
 We know that a `remote` is also a reference and it is included in the `refs\remotes` directory. And what does it points to? It points to a remote repository that may not be present in our local system.<br>
 **-** When we initialize a new git repo and we also want it to be used by other people in our team for example,then we need to push it to some remote repo. This remote repo is actually called a `remote` and the default `remote` is named as `origin`.<br>
 **-** So using the command `git remote add origin https://github.com/user/abc.git`, we are actually specifying the remote repo present at the given URL as our remote and naming it as `origin`.<br>
-**-** Now when we push the changes using `git push origin branch`, then we are actually pushing our changes to the remote added in the previous step.
+**-** Now when we push the changes using `git push origin branch`, then we are actually pushing our changes in the branch specified to the remote added in the previous step.
 
 ### Git stash
 We use `git stash` when we want to save our changes without committing them. We can save all the changes that happened since the last commit by stashing them and the stash can be applied in any of the branches. Stash is just local and is never pushed to a remote.<br>
