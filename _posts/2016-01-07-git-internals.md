@@ -76,8 +76,8 @@ Rebasing is a method to escape the unwanted merge commits that we see when we do
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;![alt text][git_rebase]
 
 Considering the same graph(git branch graph)and suppose now we want to rebase `test-branch` into `test-branch2`.<br>
-**-** We checkout `test-branch2` and do `rebase test-branch` in it.<br>
-**-** Doing the above step will take all the commits(here its only C4) applied on `test-branch2` from the point `test-branch` and `test-branch2` have diverged(nearest common ancestor), and apply it one by one on `test-branch`. So after this,the tree looks like as the left image above. `test-branch2` will now point to commit C4' and the commit C4 will be left dangling.<br>
+**-** We checkout `test-branch2` and write the command `rebase test-branch` in it.<br>
+**-** Doing the above step will take all the commits(here its only C4) applied on `test-branch2` from the point `test-branch` and `test-branch2` have diverged(nearest common ancestor), and apply it one by one on `test-branch`. So after this,the tree looks like as the left image above. `test-branch2` will now point to a new commit created C4' and the commit C4 will be left dangling.<br>
 **-** Now we can merge `test-branch` into `test-branch2` and it will be a `Fast Forward Merge` because the commits C3 can be directly reached from C4'. Doing a `FF merge` will take the tree structure to the point as illustrated in the right figure. This will give us a clean history without any merge commits.But ironically `rebase` is also a way to change the history as we did above in the tree.<br>
 **-** The commits which are left dangling are not deleted by Git.C4 will be eft untouched, and if something goes wrong with the rebase, we can go right back to the previous state.
 
@@ -86,6 +86,7 @@ We know that a `remote` is also a reference and it is included in the `refs\remo
 **-** When we initialize a new git repo and we also want it to be used by other people in our team for example,then we need to push it to some remote repo. This remote repo is actually called a `remote` and the default `remote` is named as `origin`.<br>
 **-** So using the command `git remote add origin https://github.com/user/abc.git`, we are actually specifying the remote repo present at the given URL as our remote and naming it as `origin`.<br>
 **-** Now when we push the changes using `git push origin branch`, then we are actually pushing our changes in the branch specified to the remote added in the previous step.
+**-** So `origin/master` is the `master` branch present at the remote `origin`. While our local branch is just `matser`.
 
 ### Git stash
 We use `git stash` when we want to save our changes without committing them. We can save all the changes that happened since the last commit by stashing them and the stash can be applied in any of the branches. Stash is just local and is never pushed to a remote.<br>
@@ -93,28 +94,29 @@ We use `git stash` when we want to save our changes without committing them. We 
 
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;![alt text][git_stash]
 
-**-** The stashes are saved in `refs/stash` file. But there is only one entry in that file.Actually the entry that we see belongs to the latest stash that we have done. All the other stashes are saved in the `reflogs` of that reference. `reflogs` are the reference logs that store a history of a reference. For example to get the latest stash we use the `reflog` syntax `stash@{0}` and `stash@{1}` is the one before it and so on.
+**-** The stashes are saved in `refs/stash` file. But there is only one entry in that file.Actually the entry that we see belongs to the latest stash that we have done. All the other stashes are saved in the `reflogs` of that reference. `reflogs` are the reference logs that store a history of a reference. For example `stash` is a `reflog` and to get the latest stash we use the `reflog` syntax `stash@{0}` and `stash@{1}` is the one before it and so on.
 
 ### Git tags
-Generally while each release, we tag the latest commit with messages like `release V1` etc. This helps us to examine the exact code that went into release in case any bugs come in that version at some point in the future.Tags can be lightweight or annotated.<br>
-**-** A lightweight tag is just a pointer to a particular commit.It doesn't store extra information like tagger name,date etc while an annotated tag stores all this information and it is stored properly as an object in `.git/objects` directory.<br>
+Generally while each release, we tag the latest commit with messages like `release V1` etc. This helps us to checkout and examine the exact code that went into release in case any bugs come in that version at some point in the future.Now tags can be either `lightweight` or `annotated`.<br>
+**-** A lightweight tag is just a pointer to a particular commit.It doesn't store extra information like tagger name,date etc while an annotated tag stores all this information and an annotated tag is stored properly as an object in `.git/objects` directory.<br>
 **-** In any case, all the tags that are created are stored as a file in `refs/tags` directory.Each tag file in this directory stores the SHA1 hash of the commit on which the tag is applied. <br>
-**-** Checking out a tag will put our working directory in a `DETACHED HEAD` state.
+**-** Generally its not advised to checkout a tag and do some active development on it.Checking out a tag will put our working directory in a `DETACHED HEAD` state.
 
 ### Detached HEAD
-This is an interesting state and occurs whenever the `HEAD` is not pointing to the tip of the current branch. It can happen when we checkout a commit which is not at the top of a branch. Also when we checkout a branch using its SHA1 name and not the branch name, we will get a `DETACHED HEAD` state.
+This is an interesting state and occurs whenever the `HEAD` is not pointing to the tip of the current branch. It can happen when we checkout a commit which is not at the top of a branch. Also when we checkout a branch using its SHA1 name and not the branch name(like `git checkout 1bhd..888`), we will get a `DETACHED HEAD` state.
 &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;![alt text][detached_head]
 
 **-** In the first figure, we have checked-out `master` branch. So `master` points to the latest commit(C3) and `HEAD` points indirectly to C3.<br>
 **-** Now we checkout the commit C2 and so `HEAD` will now point to C2(middle figure). At this point the `HEAD` is in a detached state as its not pointing to the tip of the branch(C3).<br>
 **-** Suppose we make further commits C4 and C5 at this point. The commits will base out from C2 now. As seen in the rightmost figure, we have created an another branch of development here .Its an anonymous branch because we haven't given a name to it.<br>
-**-** If we push `master` branch to `origin` now, then obviously C4 and C5 wont be pushed. If we checkout `master` again , then `HEAD` will again point to commit C3 and commits C4 and C5 will be left in a dangling state. Now since C4 and C5 doesn't have any reference from anywhere, they will be garbage collected by git.
+**-** If we push `master` branch to `origin` now, then obviously C4 and C5 wont be pushed. If we checkout `master` again , then `HEAD` will again point to commit C3 and commits C4 and C5 will be left in a dangling state. Now since C4 and C5 doesn't have any reference from anywhere, they will be garbage collected by git next time when GC runs.
 
 ### Git checkout
 Now as we have seen that Git is nothing but a tree data structure whose nodes are the files and folders of our working directory. The tree contains commits and if we want to checkout some branch or tag, Git just has to traverse the tree and give the files and folders pointed by those commits.<br>
 For example, suppose we do `git checkout test-branch`. Then this flow will happen<br>
 1. Git will check the entry in `refs/heads/test-branch` file. It will be pointing to a commit.<br>
-2. The working directory will now have all the files and folders pointed by that commit and its lower commits. Git does this by traversing the complete tree and checking out the files. This is because the commit actually points out to the SHA1 of the blobs and the trees.<br>
+2. The commit in turn will be pointing to a tree which contains in turn points to all the trees and blobs that were present in the index when the commit was done.<br>
+2. Once we checkout a commit,the working directory will now have all the files and folders pointed by that commit and its lower commits. Git does this by traversing the complete tree and checking out the files. This is because the commit actually points out to the SHA1 of the blobs and the trees.<br>
 3. `HEAD` will get updated to point to the `test-branch`'s' most recent commit.<br>
 
 Once all these trees and pointers are understood, other things like `git push`,`git pull`,`git fetch` etc can be easily thought of. Git contains several other advanced features like squashing several small commits into a larger commit, changing the order of commits,rewording commits etc but they all require a separate blog for each of them.
