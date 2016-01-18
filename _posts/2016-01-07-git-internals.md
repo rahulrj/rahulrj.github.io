@@ -111,6 +111,15 @@ This is an interesting state and occurs whenever the `HEAD` is not pointing to t
 **-** Suppose we make further commits C4 and C5 at this point. The commits will base out from C2 now. As seen in the rightmost figure, we have created an another branch of development here .Its an anonymous branch because we haven't given a name to it.<br>
 **-** If we push `master` branch to `origin` now, then obviously C4 and C5 wont be pushed. If we checkout `master` again , then `HEAD` will again point to commit C3 and commits C4 and C5 will be left in a dangling state. Now since C4 and C5 doesn't have any reference from anywhere, they will be garbage collected by git next time when GC runs.
 
+### Git reset and Git revert
+Here comes this classic interview question. The difference between reset and revert.<br>
+
+&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;![alt text][git_reset]
+
+**-** The second above below is an example of `git revert`. Suppose in the above history we want to remove the changes of C2. Then we will simply do `git revert C2`. This will actually create another commit(C2') which will just remove the changes applied by `C2` and the commit(C2') is applied at the top of the project history. It doesn't alter any other commits before or after that.<br>
+**-** The third image shows `git reset C2`. This command actually removes all the commits  after the `C2` and resets the project history to `C2`. But it will actually not remove all the changes done by those commits from  the working directory.This is quite a safe operation. But if we do `git reset --hard C2`, then it becomes a dangerous operation because it will remove all the commits after `C2` and their changes from the working directory. This of course is a dangerous way to undo things because unless its desirable,it can result in permanent loss of the commits and changes from the history.
+
+
 ### Git checkout
 Now as we have seen that Git is nothing but a tree data structure whose nodes are the files and folders of our working directory. The tree contains commits and if we want to checkout some branch or tag, Git just has to traverse the tree and give the files and folders pointed by those commits.<br>
 For example, suppose we do `git checkout test-branch`. Then this flow will happen<br>
@@ -136,3 +145,4 @@ Once all these trees and pointers are understood, other things like `git push`,`
 [git_rebase]: /images/git_rebase.png "git rebase"
 [detached_head]: /images/detached_head.png "detached head"
 [git_stash]: /images/git_stash.png "Git stash"
+[git_reset]: /images/git_reset.png "Git reset"
