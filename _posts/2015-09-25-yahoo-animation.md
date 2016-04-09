@@ -11,7 +11,7 @@ This week i tried my hands on some cool animations that comes bundled with the [
 <br><br>
 This project's demo and code is available [here](https://github.com/rahulrj/YahooNewsOnboarding).
 <br><br>
-&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;![](https://github.com/rahulrj/YahooNewsOnboarding/blob/master/yahoo-news-demo.gif)
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;![](https://github.com/rahulrj/YahooNewsOnboarding/blob/master/yahoo-news-demo.gif)
 
 ## How are the animations designed?
 
