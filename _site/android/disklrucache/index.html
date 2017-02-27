@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=RobotoDraft:300,400|Inconsolata:400,700"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/postcss.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-68246806-1', 'auto');
+      ga('send', 'pageview');
+
+</script>
+ </head>
+
+  <body>
+    <div class="header">
+    </div>
+
+    <div id="content">
+
+          <h1 class="page-title">DiskLruCache</h1>
+          <div class="page-description">About Jake Wharton's DiskLruCache</div>
+          <div class="post-details">
+
+            <img src="/images/pic_square.png">
+            <div class="post-author">
+              By Rahul Raja
+            </div>
+            <div class="post-date">February 20, 2017</div>
+
+          </div>
+
+
+          <p>This post is about the implementation details of Jake Wharton’s famous <a href="https://github.com/JakeWharton/DiskLruCache">DiskLruCache</a>. The reason that this cache version is so popular
+is what prompted me to look inside it. Although it was developed 5 years ago, but i found it out now and it is
+a very efficient and safe implementation for a Disk Cache. Its also used in OkHttp and it forms the basis of
+<a href="https://github.com/square/okhttp/blob/master/okhttp/src/main/java/okhttp3/internal/cache/DiskLruCache.java">OkHttp’s disk cache.</a></p>
+
+<p>The areas where this <code>DiskLruCache</code> really packs a punch is</p>
+
+<p>1.It handles the case very efficiently where the cache or its files could corrupt itself . The obvious thing here is to delete the cache, which is not present in most of the cache implementations . We usually go on by the idea that such a case will rarely happen in our projects.</p>
+
+<p>2.It maintains an in-memory LRU cache of the saved entries so we don’t have to check in the disk or DB to check for a particular cache entry every time it is accessed.</p>
+
+<p>3.It can determine internally whether the value at a particular location at cache is the most recent or not. In other words, it does a versioning of the value every time an edit is made in the cache for a particular key.</p>
+
+<p>4.If you start writing to a <code>key</code> in cache and something goes wrong in between, you can abort this edit operation. All the temporary values created/stored for this edit will be deleted. Even when there is an ongoing operation and and the app is killed for any reason, we can call <code>cache.close()</code> and the cache will still be in a consistent state by deleting all the temporary created values/files.</p>
+
+<p>5.The cache is also safe safe for reading and writing to the same key simultaneously from two different threads.This is because the functions <code>get(key)</code> and <code>edit(key)</code> are synchronized at the function level and one thread won’t enter another function if another thread is already there in any other synchronized function of the same <code>DiskLruCache</code> object.</p>
+
+<p>There are some classes/objects and other concepts that form the base for this cache. Lets go through these classes and the concepts and then we will discuss the cache operations.</p>
+
+<h2 id="entry-object">Entry object</h2>
+<p>Every entry in the cache is an <code>Entry</code> object. The <code>Entry</code> object has the following structure</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Entry</span><span class="o">{</span>
+  <span class="n">String</span> <span class="n">key</span><span class="o">;</span>
+  <span class="kt">long</span><span class="o">[]</span> <span class="n">lengths</span><span class="o">;</span>
+  <span class="kt">boolean</span> <span class="n">readable</span><span class="o">;</span>
+  <span class="n">Editor</span> <span class="n">currentEditor</span><span class="o">;</span>
+  <span class="kt">long</span> <span class="n">sequenceNumber</span><span class="o">;</span>
+
+  <span class="n">File</span> <span class="nf">getCleanFile</span><span class="o">(</span><span class="n">index</span><span class="o">);</span>
+  <span class="n">File</span> <span class="nf">getDirtyFile</span><span class="o">(</span><span class="n">index</span><span class="o">);</span>
+<span class="o">}</span></code></pre></div>
+
+<p>-&gt; <strong>key</strong> is the unique identifier for an <code>Entry</code>
+-&gt; <strong>currentEditor</strong>  is an <code>Editor</code> object(which is discussed below)which is not NULL if this <code>Entry</code> is being edited currently.
+-&gt; <strong>lengths</strong> is the number of values that are present in the cache for this particular <code>key</code>. So,we can save multiple values in the cache for a particular <code>key</code>. <br />
+-&gt; <strong>readable</strong> This flag denotes that this <code>Entry</code> has been successfully published and is now readable.This flag will be false for an <code>Entry</code> only if its being created for the first time.  <br />
+-&gt; <strong>sequenceNumber</strong> This denotes the number of the most recently committed edit to this <code>Entry</code>.It is incremented every time a successful edit is made to this <code>Entry</code>. For its proper use-case please see the description of the <code>sequenceNumber</code> of <code>Snapshot</code> object.<br />
+-&gt; <strong>getDirtyFile(index)</strong> returns a temporary file(created during an edit operation,before it is renamed to the clean file when commit succeeds) at the <code>index</code> given for this <code>Entry</code>. <br />
+-&gt; <strong>getCleanFile(index)</strong> is the file at index supplied for this <code>Entry</code>,which is available for reading now after an edit has been committed successfully.</p>
+
+<h2 id="snapshot-object">Snapshot object</h2>
+<p>This class is a snapshot of the <code>Entry</code> object in the cache. When the clients call <code>cache.get(key)</code>, they get a <code>Snapshot</code> object, which contains all the information needed to retrieve the cached data at <code>key</code>.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Snapshot</span>  <span class="o">{</span>
+    <span class="n">String</span> <span class="n">key</span><span class="o">;</span>
+    <span class="kt">long</span> <span class="n">sequenceNumber</span><span class="o">;</span>
+    <span class="n">InputStream</span><span class="o">[]</span> <span class="n">ins</span><span class="o">;</span>
+    <span class="kt">long</span><span class="o">[]</span> <span class="n">lengths</span><span class="o">;</span>
+  <span class="o">}</span></code></pre></div>
+
+<p>-&gt; <strong>key</strong> is the key of the <code>Entry</code> which this object is a snapshot of.<br />
+-&gt; <strong>ins</strong> is the array of InputStream to our values in the cache. So ins[0] is the stream to the value present at
+index zero of the <code>Entry</code> at <code>key</code>. DiskLruCache allows accessing the values in the cache only through stream.<br />
+-&gt; <strong>lengths</strong> is the same <code>lengths</code> as in the <code>Entry</code> object. It’s a length of the values present in the cache for
+‘key’.<br />
+-&gt; <strong>sequenceNumber</strong>  As discussed in the <code>Entry</code> object, this number can be  very useful because its shared by the  <code>Entry</code> object also. So <code>cache.get(key)</code> returns a <code>Snapshot</code> object and when a <code>Snapshot</code> object is created internally,the same <code>sequenceNumber</code> of its corresponding <code>Entry</code> object to it also. So it can be determined that  if the <code>sequenceNumber</code> for a <code>Snapshot</code> doesn’t match with the <code>sequenceNumber</code> for the <code>Entry</code> at a particular
+<code>key</code>, then that <code>Snapshot</code> is stale. It means someone has edited the <code>Entry</code> in between for that <code>key</code> and incremented this number.  </p>
+
+<h2 id="editor-object">Editor object</h2>
+<p>Every <code>Entry</code> object wraps an <code>Editor</code> object in itself. If an <code>Entry</code> at a <code>key</code> is being actively edited, then
+this <code>Editor</code> object is NOT NULL for it. So this object is the most useful thing in preventing multiple edits
+simultaneously to a single <code>Entry</code>.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">class</span> <span class="nc">Editor</span> <span class="o">{</span>
+    <span class="n">Entry</span> <span class="n">entry</span><span class="o">;</span>
+    <span class="kt">boolean</span><span class="o">[]</span> <span class="n">written</span><span class="o">;</span>
+    <span class="kt">boolean</span> <span class="n">hasErrors</span><span class="o">;</span>
+    <span class="kt">boolean</span> <span class="n">committed</span><span class="o">;</span>
+
+    <span class="n">InputStream</span> <span class="nf">newInputStream</span><span class="o">(</span><span class="n">index</span><span class="o">);</span>
+    <span class="n">OutputStream</span> <span class="nf">newOutputStream</span><span class="o">(</span><span class="n">index</span><span class="o">);</span>
+
+  <span class="o">}</span></code></pre></div>
+
+<p>-&gt; <strong>entry</strong> is the <code>Entry</code> object where this <code>Editor</code> object is working upon.  <br />
+-&gt; <strong>written</strong> this flag takes care of the fact that if an <code>Entry</code> is being created for the first time, then there should be a value supplied for every <code>index</code> of that <code>Entry</code> . <code>DiskLruCache</code> insists that you must pass a value(even if its empty) for every <code>index</code> of an <code>Entry</code> when that <code>Entry</code> is created for the first time. Later any <code>index</code> can be edited with a new value.<br />
+-&gt; <strong>hasErrors</strong> determines whether any error occurred while writing to the <code>OutputStream</code><br />
+-&gt; <strong>committed</strong> this flag is <code>true</code> if this <code>Editor</code> has committed its operation<br />
+-&gt; <strong>newOutputStream(int index)</strong> this returns a new unbuffered <code>OutputStream</code> to write the value at <code>index</code>. The file name at ith index is of the form key.i where <code>key</code> is the <code>Entry</code>’s key and i is the index where we want to place the file. <br />
+-&gt; <strong>newInputStream(index)</strong> This will return an unbuffered <code>InputStream</code> to read the last committed value at <code>index</code>,or null if no value has been committed.</p>
+
+<h2 id="journal-file">Journal file</h2>
+<p>One important feature of DiskLruCache is that it maintains a Journal file for recording various operations that the cache makes. A journal file is nothing but a simple <code>File</code> object. There are 4 kinds of entries present in the Journal file which correspond to various cache operations.</p>
+
+<p>-&gt; <strong>READ key</strong>-  It signifies that there has been a <code>READ</code> operation for the cache entry with its <code>key</code> as mentioned. I don’t understand why the <code>READ</code> entry is present. It just tracks the accesses that were done to the LRU. Nothing has been done in the <code>DiskLruCache</code> with this information.    <br />
+-&gt; <strong>REMOVE key</strong> - This indicates that the cache entry with the specified <code>key</code> has been removed from cache(disk cache and LRU cache) and so we remove an entry is it exists in the memory cache while processing the journal file.    <br />
+-&gt; <strong>CLEAN key valuesLen</strong> - This entry indicates that an entry with the mentioned <code>key</code> has been successfully inserted into the cache and now it may be accessed. <code>valuesLen</code> is the length of the length of values at every index for this <code>Entry</code> separated by spaces.  <br />
+-&gt; <strong>DIRTY key</strong> - A dirty entry indicates that this entry is currently being edited or updated. Every <code>DIRTY</code> entry for a particular <code>key</code> should be followed by a <code>REMOVE</code> or <code>CLEAN</code> entry for the same <code>key</code>. If there is no matching <code>REMOVE</code> or <code>CLEAN</code> after <code>DIRTY</code>, it means that this entry was left in an inconsistent state during its edit.  </p>
+
+<p>A question that can be thou upon is, why does the <code>DIRTY</code> entry exists anyway? Why not just write a <code>CLEAN</code> entry to the journal file every time an <code>Entry</code> is published? What is the use of this intermediate step?  </p>
+
+<p>This is because suppose an edit or update to a file was in progress and the app got killed somehow.Now what will happen to that half-written file? This is where the <code>DIRTY</code> entry comes into picture. Using the <code>DIRTY</code> entry, we can at-least delete those files next time when the app starts and the journal is processed again. This entry is used to keep track of such scenarios.Now because we have a <code>DIRTY</code> entry, we have a dirty file too corresponding to that. This dirty file gets converted to a clean file when <code>editor.commit()</code> is completed.</p>
+
+<p>The journal file is created when the cache is initialized the first time and if a journal file already exists from
+the next time of app start, then the entries of the file are simply read into a <code>LinkedHashMap&lt;Entry.key,Entry&gt;</code>, which also serves as in the in-memory cache for the <code>Entry</code> objects.<br />
+So if the journal file already contains entries from the previous app session, we can create a list of all the cache
+entries and put it in the <code>LinkedHashMap</code> using the journal file.<br />
+If there is a <code>REMOVE</code> entry in the journal file, the corresponding entry is also removed from
+the <code>Map</code>. For a <code>CLEAN</code> entry in the file, a new <code>Entry</code> object is created and put it in the <code>Map</code>. For a <code>DIRTY</code> entry also, a new <code>Entry</code> object is put in the <code>Map</code>.While putting it in the <code>Map</code>, for a <code>DIRTY</code> entry, the <code>Editor</code> object(<code>currentEditor</code>) will be NOT NULL and a new <code>Editor</code> is created there. For a <code>READ</code> entry, nothing has to be done, because for this <code>READ</code> entry, there would already be an <code>Entry</code> object created for the corresponding <code>CLEAN</code> entry for the same <code>key</code>.<br />
+But after reading the journal at the cache start-up time, if there are entries that are completely <code>DIRTY</code> and no <code>CLEAN</code> or <code>REMOVE</code> entry exist for that key, then those entries are inconsistent files/values, they are removed from the <code>LinkedHashMap</code>, although they still continue to be in the journal file.</p>
+
+<p>While putting it in the <code>Map</code>, for a <code>DIRTY</code> entry, the <code>Editor</code> object will be NOT NULL and a new <code>Editor</code> is
+created there. But after reading the journal at the cache start-up time, since <code>DIRTY</code> entries are inconsistent
+files/values, they are removed from the <code>LinkedHashMap</code>, although they still continue to be in the journal file.
+For <code>CLEAN</code> and <code>READ</code> entries, the <code>Entry</code> object is just created and inserted.</p>
+
+<p>Also, if we get any <code>IOException</code> during reading and processing of journal file, we can be sure that the journal and consequently the cache directory is corrupt, and so we can delete the cache directory. This is how the journal file helps in guarding against the corrupt cache directory.</p>
+
+<p>At the time of starting up the cache initially, since there is no previous journal file, the new journal file is
+simply updated with its headers i.e the file name, app version and the <code>valueCount</code>.(the max entries a particular key
+can store)</p>
+
+<p>The journal file is rebuilt every time the number of operations in the file go beyond 2000. This will cut down unnecessary entries from the file and will keep the size of the journal optimal. Anytime when a journal rebuild is required, firstly the public writer is closed and the journal is updated with a function local <code>Writer</code> object. This prevents concurrent updation to the journal file.</p>
+
+<p>So now we have covered all the things required for understanding it, we can go over its major operations.</p>
+
+<h2 id="initializing-the-cache">Initializing the cache</h2>
+<p>So before using the cache for storing anything, we need to initialize it.We can initialize or open the cache using</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">DiskLruCache</span> <span class="nf">open</span><span class="o">(</span><span class="n">File</span> <span class="n">directory</span><span class="o">,</span> <span class="kt">int</span> <span class="n">appVersion</span><span class="o">,</span> <span class="kt">int</span> <span class="n">valueCount</span><span class="o">,</span> <span class="kt">long</span> <span class="n">maxSize</span><span class="o">)</span></code></pre></div>
+
+<p>-&gt; <strong>appVersion</strong> is the version number that will be written in the journal. This is to match this number with the appVersion that is actually present in the journal file, so that we can be sure that we are reading the correct file or the file is not corrupt.<br />
+-&gt; <strong>valueCount</strong> is the number of entries that each key in the cache can have.<br />
+-&gt; <strong>maxSize</strong> is the maximum size that we want the cache to have. If the total size of the files exceed <code>maxSize</code>, the entries from the LRU cache are and disk are deleted everytime the journal is rebuilt. But this can pose a problem because suppose we are playing a video from a disk location and it gets deleted due to cache overflow.  </p>
+
+<p>Opening of the cache checks for a journal file. If it already exists, we just create <code>Entry</code> objects from it and store in the <code>Map</code> as described above in the <code>journal</code> section. If it doesn’t exist, then a new journal file is created and a <code>BufferedStream</code> is opened for writing into that file,which is the journal writer( a <code>Writer</code> object).</p>
+
+<h2 id="writing-into-the-cache">Writing into the cache</h2>
+<p>For writing into that cache, <code>DiskLruCache</code> provides the <code>edit(key)</code> API and it returns an <code>Editor</code>.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">DiskLruCache</span><span class="o">.</span><span class="na">Editor</span> <span class="n">editor</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+<span class="n">editor</span> <span class="o">=</span> <span class="n">mDiskCache</span><span class="o">.</span><span class="na">edit</span><span class="o">(</span><span class="n">key</span><span class="o">);</span></code></pre></div>
+
+<p><code>edit(key)</code> will return NULL if for the <code>Entry</code> with that <code>key</code>, the <code>Editor</code> is not NULL, means the current <code>Entry</code>
+is being actively edited. Otherwise,  <code>Entry</code> for the given <code>key</code> is created or update and a corresponding entry
+is made in  the journal file.  </p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">journalWriter</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">DIRTY</span> <span class="o">+</span> <span class="sc">&#39; &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="sc">&#39;\n&#39;</span><span class="o">);</span></code></pre></div>
+
+<p>Unless we issue the command <code>editor.commit()</code>, the <code>Entry</code> will be considered as being edited. This is a quite good
+design principle that we can edit an entry/key as long as we want to and the cache will still be consistent. For the
+same key, if we are not saving multiple entries concurrently, this will be very safe and sound.</p>
+
+<p>So a journal and a <code>Map</code> entry is created, but how do we save the actual data into the disk/cache?
+For writing into the cache, we use an <code>OutputStream</code>. The <code>DiskLruCache</code> opens a stream to a particular location
+in the directory. For example, for getting a stream at index 0( remember we can save multiple values for a particular key), and converting it to <code>BufferedStream</code> for writing data, we use  </p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">OutputStream</span> <span class="n">out</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">BufferedOutputStream</span><span class="o">(</span><span class="n">editor</span><span class="o">.</span><span class="na">newOutputStream</span><span class="o">(</span><span class="mi">0</span><span class="o">),</span> <span class="n">bufferSize</span><span class="o">);</span></code></pre></div>
+
+<p><code>Editor.newOutputStream(index)</code> will create a dirty file(temporary file with temp extension in the form in the form directory/key/.index.tmp) and returns an <code>OutputStream</code> to that location. The dirty file is later changed to a clean file with proper operation once successful edit to this <code>Entry</code> has been done.</p>
+
+<p>Now we have to commit this edit so that other readers can use it and another edit can be possible over this key.
+So <code>editor.commit()</code> command makes this possible. In <code>commit()</code>, the dirty file which was created earlier is renamed to a clean file(in the form directory/key/.index) and if any error occurs in this process, the edit is aborted       (<code>editor.abort()</code>) and the dirty file is deleted. After the commit is done, a journal entry for <code>CLEAN</code> is made and that <code>Entry</code> is marked as <code>readable</code>(any <code>Entry</code> which has been created will be <code>readable</code> once its published).    </p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">journalWriter</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">CLEAN</span> <span class="o">+</span> <span class="sc">&#39; &#39;</span> <span class="o">+</span> <span class="n">entry</span><span class="o">.</span><span class="na">key</span> <span class="o">+</span> <span class="n">entry</span><span class="o">.</span><span class="na">getLengths</span><span class="o">()</span> <span class="o">+</span> <span class="sc">&#39;\n&#39;</span><span class="o">);</span></code></pre></div>
+
+<p>While writing into the cache, if something goes wrong in the <code>edit()</code> or <code>commit()</code> process, or any of the steps throw an <code>IOException</code>, then we can abort the edit using <code>editor.abort()</code>. This will any dirty file created in the process and will also append a <code>REMOVE</code> operation for it, since we ought to have a <code>REMOVE</code> or <code>CLEAN</code> entry in the journal file for a corresponding <code>DIRTY</code> entry.</p>
+
+<h2 id="getting-data-from-cache">Getting data from cache</h2>
+<p>We get the data from cache in the form of a <code>Snapshot</code> object. <code>DiskLruCache</code> offers a <code>get(key)</code> method for this.
+So if we want to get any of the data stored at <code>key</code>, we do  </p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">DiskLruCache</span><span class="o">.</span><span class="na">Snapshot</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="n">snapshot</span> <span class="o">=</span> <span class="n">mDiskCache</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">key</span><span class="o">);</span></code></pre></div>
+
+<p>As discussed above, the <code>Snapshot</code> object contains an array of <code>InputStream</code>s and these are streams to the files at the respective indices. So we will get the stream and convert it into a <code>BufferedStream</code> in the following way. Here,
+i am getting the <code>File</code> at index zero of this <code>Entry</code>.</p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">InputStream</span> <span class="n">in</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="na">getInputStream</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+<span class="n">BufferedInputStream</span> <span class="n">buffIn</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">BufferedInputStream</span><span class="o">(</span><span class="n">in</span><span class="o">,</span> <span class="n">bufferSize</span><span class="o">);</span></code></pre></div>
+
+<p>Once the data has been read, all the streams can be closed using <code>snapshot.close()</code> and a entry is made in the journal file for a successful read.  </p>
+
+<div class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">journalWriter</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">READ</span> <span class="o">+</span> <span class="sc">&#39; &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="sc">&#39;\n&#39;</span><span class="o">);</span></code></pre></div>
+
+<h2 id="closing-the-cache">Closing the cache</h2>
+<p>After everything has been done, the cache can be closed using <code>cache.close()</code>. This operation will check that if there are any ongoing edits in progress( <code>currentEdtior</code>!=null for an <code>Entry</code>), and if there are, it will abort them(<code>edior.abort()</code>). Also, the journalWriter is closed, so that nothing more can now be written onto the journal file.  </p>
+
+<p>There are many implementations of <code>DiskLruCache</code> available online. One of those implementations is in Google samples itself <a href="https://developer.android.com/samples/DisplayingBitmaps/src/com.example.android.displayingbitmaps/util/ImageCache.html">here.</a></p>
+
+
+
+    </div>
+
+
+
+
+    </body>
+</html>
