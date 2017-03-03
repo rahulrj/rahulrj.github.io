@@ -47,6 +47,8 @@ is what prompted me to look inside it. Although it was developed 5 years ago, bu
 a very efficient and safe implementation for a Disk Cache. Its also used in OkHttp and it forms the basis of
 <a href="https://github.com/square/okhttp/blob/master/okhttp/src/main/java/okhttp3/internal/cache/DiskLruCache.java">OkHttp’s disk cache.</a></p>
 
+<p>                                               <img src="/images/lru_cache.png" alt="alt text" title="DiskLruCache" /></p>
+
 <p>The areas where this <code>DiskLruCache</code> really packs a punch is</p>
 
 <p>1.It handles the case very efficiently where the cache or its files could corrupt itself . The obvious thing here is to delete the cache, which is not present in most of the cache implementations . We usually go on by the idea that such a case will rarely happen in our projects.</p>
@@ -221,6 +223,7 @@ i am getting the <code>File</code> at index zero of this <code>Entry</code>.</p>
 <p>After everything has been done, the cache can be closed using <code>cache.close()</code>. This operation will check that if there are any ongoing edits in progress( <code>currentEdtior</code>!=null for an <code>Entry</code>), and if there are, it will abort them(<code>edior.abort()</code>). Also, the journalWriter is closed, so that nothing more can now be written onto the journal file.  </p>
 
 <p>There are many implementations of <code>DiskLruCache</code> available online. One of those implementations is in Google samples itself <a href="https://developer.android.com/samples/DisplayingBitmaps/src/com.example.android.displayingbitmaps/util/ImageCache.html">here.</a></p>
+
 
 
 
